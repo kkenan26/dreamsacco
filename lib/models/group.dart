@@ -60,4 +60,37 @@ class Group {
       'createdAt': Timestamp.fromDate(createdAt), //firestore time
     };
   }
+
+  // Creates a new Group using the same data, but lets you change specific fields.
+  // The '?' means the parameter is optional.
+  // If you don't provide a new value, it uses the existing one (e.g., id ?? this.id).
+  Group copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? type,
+    String? adminId,
+    String? treasurerId,
+    double? totalBalance,
+    double? goalAmount,
+    String? goalDescription,
+    double? monthlyContribution,
+    List<String>? memberIds,
+    DateTime? createdAt,
+  }) {
+    return Group(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      adminId: adminId ?? this.adminId,
+      treasurerId: treasurerId ?? this.treasurerId,
+      totalBalance: totalBalance ?? this.totalBalance,
+      goalAmount: goalAmount ?? this.goalAmount,
+      goalDescription: goalDescription ?? this.goalDescription,
+      monthlyContribution: monthlyContribution ?? this.monthlyContribution,
+      memberIds: memberIds ?? this.memberIds,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
