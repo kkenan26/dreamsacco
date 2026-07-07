@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "914982985085",
+    "project_id": "dreamsacco-84659",
+    "storage_bucket": "dreamsacco-84659.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:914982985085:android:817bbfc973e2237fe9c014",
+        "android_client_info": {
+          "package_name": "com.dreamsacco.dreamsacco"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJZke0_EnRtvg4lAQ6GyOjlVIETZIuBl8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
