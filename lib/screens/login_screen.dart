@@ -11,7 +11,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
-  final AuthService _authservice = AuthService();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   void _sendOTP() async {

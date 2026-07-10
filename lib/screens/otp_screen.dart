@@ -17,7 +17,7 @@ class OTPScreen extends StatefulWidget {
 
 class _OTPScreenState extends State<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
-  final TextEditingController _nameController = TextditingController();
+  final TextEditingController _nameController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
@@ -68,7 +68,7 @@ class _OTPScreenState extends State<OTPScreen> {
             Text(
               'Enter the code sent to ${widget.phoneNumber}',
               style: const TextStyle(fontSize: 16),
-              texAlign: TextAlign.center,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             TextField(

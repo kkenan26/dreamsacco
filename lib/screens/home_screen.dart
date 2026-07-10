@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package: firebase_auth/firebase_auth.dart';
-import '../services/auth_services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,11 +21,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadUser() async {
+    final user = await _authService.getCurrentUser();
+    setState(() => _user = user);
+  }
+
+  void _signOut() async {
     await _authService.signOut();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
   }
 
   @override
@@ -41,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Center(
         child: _user ==null
-            ? const CircularProgresIndicator()
+            ? const CircularProgressIndicator()
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
           children: [

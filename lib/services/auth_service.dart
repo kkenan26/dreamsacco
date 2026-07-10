@@ -34,7 +34,7 @@ class AuthService {
 }) async {
     try
     {
-      PhoneAuthCredential credential = PhoneAuthProvider().credential(
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: otp,
       );

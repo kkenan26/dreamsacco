@@ -2,7 +2,7 @@ class UserModel{
   final String uid;
   final String name;
   final String phone;
-  final String creditScore;
+  final int creditScore;
   final double loanLimit;
   final int contributionStreak;
   final double totalContributions;
@@ -13,7 +13,7 @@ class UserModel{
     required this.uid,
     required this.name,
     required this.phone,
-    this.creditScore = 50.0,
+    this.creditScore = 50,
     this.loanLimit = 0.0,
     this.contributionStreak = 0,
     this.totalContributions= 0.0,
