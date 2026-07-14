@@ -22,7 +22,11 @@ class MyApp extends StatelessWidget {
       title: 'DreamSacco',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            primary: Color(0xFF0D47A1),
+            secondary: Color(0xFF42A5F5),
+            surface: Color(0xFFF0F8FF),),
         useMaterial3: true,
       ),
       home: StreamBuilder<User?>(
