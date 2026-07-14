@@ -2,6 +2,7 @@ class UserModel{
   final String uid;
   final String name;
   final String phone;
+  final String email;
   final int creditScore;
   final double loanLimit;
   final int contributionStreak;
@@ -13,6 +14,7 @@ class UserModel{
     required this.uid,
     required this.name,
     required this.phone,
+    required this.email,
     this.creditScore = 50,
     this.loanLimit = 0.0,
     this.contributionStreak = 0,
@@ -26,6 +28,7 @@ class UserModel{
       'uid': uid,
       'name': name,
       'phone': phone,
+      'email': email,
       'creditScore': creditScore,
       'loanLimit': loanLimit,
       'contributionStreak': contributionStreak,
@@ -40,6 +43,7 @@ factory UserModel.fromMap(Map<String, dynamic> map) {
       uid: map['uid'],
       name: map['name'],
       phone: map['phone'],
+      email: map['email'] ?? '',
       creditScore: map['creditScore']?.toDouble() ?? 50.0,
       loanLimit: map['loanLimit']?. toDouble() ?? 0.0,
       contributionStreak: map['contributionStreak']?.toInt() ?? 0,
