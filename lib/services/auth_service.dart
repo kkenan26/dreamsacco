@@ -33,6 +33,7 @@ class AuthService {
       }
       return null;
       } catch (e) {
+      print('SignUp Error: $e');
       return null;
       }
     }
