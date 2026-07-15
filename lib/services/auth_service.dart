@@ -71,7 +71,7 @@ class AuthService {
   }
 
 //4) Verifying OTP
-  Future<bool> verifyOtp({
+  Future<bool> verifyOTP({
     required String verificationId,
     required String otp,
 }) async {
