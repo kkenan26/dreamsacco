@@ -4,10 +4,10 @@ class UserModel{
   final String phone;
   final String email;
   final int creditScore;
-  final double loanLimit;
+  final int loanLimit;
   final int contributionStreak;
-  final double totalContributions;
-  final double totalLoansRepaid;
+  final int totalContributions;
+  final int totalLoansRepaid;
   final DateTime createdAt;
 
   UserModel({
@@ -16,10 +16,10 @@ class UserModel{
     required this.phone,
     required this.email,
     this.creditScore = 50,
-    this.loanLimit = 0.0,
+    this.loanLimit = 0,
     this.contributionStreak = 0,
-    this.totalContributions= 0.0,
-    this.totalLoansRepaid= 0.0,
+    this.totalContributions= 0,
+    this.totalLoansRepaid= 0,
     required this.createdAt,
 });
 
@@ -44,11 +44,11 @@ factory UserModel.fromMap(Map<String, dynamic> map) {
       name: map['name'],
       phone: map['phone'],
       email: map['email'] ?? '',
-      creditScore: map['creditScore']?.toDouble() ?? 50.0,
-      loanLimit: map['loanLimit']?. toDouble() ?? 0.0,
-      contributionStreak: map['contributionStreak']?.toInt() ?? 0,
-      totalContributions: map['totalContributions']?.toDouble() ?? 0.0,
-      totalLoansRepaid: map['totalLoansRepaid']?.toDouble() ?? 0.0,
+      creditScore: (map['creditScore'] as num?)?.toInt() ?? 50,
+      loanLimit: (map['loanLimit'] as num?)?. toInt() ?? 0,
+      contributionStreak: (map['contributionStreak'] as num?)?.toInt() ?? 0,
+      totalContributions: (map['totalContributions'] as num?)?.toInt() ?? 0,
+      totalLoansRepaid: (map['totalLoansRepaid'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(map['createdAt']),
     );
 }
