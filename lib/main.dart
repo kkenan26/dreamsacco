@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       theme: ThemeData(
         useMaterial3: true,
+        textTheme: GoogleFonts.fredokaTextTheme(),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6FA8DC), // muted soft blue
           secondary: const Color(0xFF8FD6BD), // soft sage green
