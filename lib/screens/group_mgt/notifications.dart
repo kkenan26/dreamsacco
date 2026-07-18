@@ -2,6 +2,26 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 
+Future<bool> _confirmAction(BuildContext context, String title, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
@@ -69,6 +89,18 @@ class NotificationsScreen extends StatelessWidget {
                         icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
                         onPressed: () {
                           groupService.deleteNotification(notif['id']);
+                        },
+                      ),IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                        onPressed: () async {
+                          bool confirmed = await _confirmAction(
+                            context,
+                            'Delete Notification?',
+                            'This cannot be undone.',
+                          );
+                          if (confirmed) {
+                            groupService.deleteNotification(notif['id']);
+                          }
                         },
                       ),
                     ],

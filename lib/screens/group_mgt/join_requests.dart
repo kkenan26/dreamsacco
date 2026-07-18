@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/join_request.dart';
 import '../../services/credit_score.dart';
+
+Future<bool> _confirmAction(BuildContext context, String title, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
 class JoinRequestsScreen extends StatelessWidget {
   final String groupId;
 
@@ -100,12 +121,19 @@ class JoinRequestsScreen extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
                               onPressed: () async {
-                                await groupService.rejectJoinRequest(
-                                  groupId: groupId,
-                                  requestId: request.id,
-                                  userId: request.userId,
-                                  groupName: request.userName,
+                                bool confirmed = await _confirmAction(
+                                  context,
+                                  'Reject Request?',
+                                  'This will reject ${request.userName}\'s join request.',
                                 );
+                                if (confirmed) {
+                                  await groupService.rejectJoinRequest(
+                                    groupId: groupId,
+                                    requestId: request.id,
+                                    userId: request.userId,
+
+                                  );
+                                }
                               },
                             ),
                           ],
@@ -143,7 +171,9 @@ class JoinRequestsScreen extends StatelessWidget {
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: ListTile(
                         title: Text(request['userName'] ?? 'Unknown'),
-                        subtitle: const Text('Requested to leave this group'),
+                        subtitle: Text(
+                          'Role: ${request['role'] ?? 'member'} · Joined: ${request['joinedAtDisplay'] ?? 'Unknown'}',
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -160,11 +190,18 @@ class JoinRequestsScreen extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
                               onPressed: () async {
-                                await groupService.rejectLeaveRequest(
-                                  groupId: groupId,
-                                  requestId: request['id'],
-                                  userId: request['userId'],
+                                bool confirmed = await _confirmAction(
+                                  context,
+                                  'Reject Leave Request?',
+                                  'This will keep ${request['userName']} in the group.',
                                 );
+                                if (confirmed) {
+                                  await groupService.rejectLeaveRequest(
+                                    groupId: groupId,
+                                    requestId: request['id'],
+                                    userId: request['userId'],
+                                  );
+                                }
                               },
                             ),
                           ],

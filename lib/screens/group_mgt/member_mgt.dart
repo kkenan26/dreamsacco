@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/member.dart';
 import '../../services/credit_score.dart';
+
+Future<bool> _confirmAction(BuildContext context, String title, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
 class MemberManagementScreen extends StatelessWidget {
   final String groupId;
 
@@ -63,10 +84,17 @@ class MemberManagementScreen extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () async {
-                          await groupService.removeMember(
-                            groupId: groupId,
-                            userId: member.userId,
+                          bool confirmed = await _confirmAction(
+                            context,
+                            'Remove Member?',
+                            'This will remove ${member.userId} from the group.',
                           );
+                          if (confirmed) {
+                            await groupService.removeMember(
+                              groupId: groupId,
+                              userId: member.userId,
+                            );
+                          }
                         },
                       ),
                     ],

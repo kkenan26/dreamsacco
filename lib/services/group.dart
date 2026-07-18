@@ -154,7 +154,6 @@ class GroupService {
     required String groupId,
     required String requestId,
     required String userId,
-    required String groupName,
   }) async {
     await _firestore
         .collection('groups')
@@ -162,6 +161,9 @@ class GroupService {
         .collection('joinRequests')
         .doc(requestId)
         .update({'status': 'rejected'});
+
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
 
     await _sendNotification(
       targetUserId: userId,
@@ -225,6 +227,25 @@ class GroupService {
     required String userId,
     required String userName,
   }) async {
+    DocumentSnapshot memberDoc = await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('members')
+        .doc(userId)
+        .get();
+
+    String role = 'member';
+    String joinedAtDisplay = 'Unknown';
+
+    if (memberDoc.exists) {
+      Map<String, dynamic> data = memberDoc.data() as Map<String, dynamic>;
+      role = data['role'] ?? 'member';
+      if (data['joinedAt'] != null) {
+        DateTime joinedAt = (data['joinedAt'] as Timestamp).toDate();
+        joinedAtDisplay = '${joinedAt.day}/${joinedAt.month}/${joinedAt.year}';
+      }
+    }
+
     CollectionReference leaveRequestsRef = _firestore
         .collection('groups')
         .doc(groupId)
@@ -233,6 +254,8 @@ class GroupService {
     await leaveRequestsRef.doc(userId).set({
       'userId': userId,
       'userName': userName,
+      'role': role,
+      'joinedAtDisplay': joinedAtDisplay,
       'status': 'pending',
       'requestedAt': Timestamp.now(),
     });
