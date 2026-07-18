@@ -10,9 +10,11 @@ class Group {
   final double totalBalance;
   final double goalAmount;
   final String goalDescription;
-  final double monthlyContribution;
+  final double contribution;
   final List<String> memberIds;
   final DateTime createdAt;
+  final int contributionFrequencyValue;
+  final String contributionFrequencyUnit; //days,weeks
 
   Group({
     required this.id,
@@ -20,14 +22,33 @@ class Group {
     required this.description,
     required this.type,
     required this.adminId,
+    required this.contributionFrequencyValue,
+    required this.contributionFrequencyUnit,
     required this.treasurerId,
     this.totalBalance = 0.0,
     required this.goalAmount,
     required this.goalDescription,
-    required this.monthlyContribution,
+    required this.contribution,
     this.memberIds = const[],//empty memer list first
     DateTime? createdAt,
 }) : createdAt = createdAt ?? DateTime.now(); //use now if not provided
+
+  Group.create({
+    required this.name,
+    required this.description,
+    required this.type,
+    required this.adminId,
+    required this.treasurerId,
+    required this.goalAmount,
+    required this.goalDescription,
+    required this.contribution,
+    required this.contributionFrequencyValue,
+    required this.contributionFrequencyUnit,
+    this.totalBalance = 0.0,
+    this.memberIds = const [],
+    DateTime? createdAt,
+  })  : id = '', // temporary placeholder
+        createdAt = createdAt ?? DateTime.now();
 
   factory Group.fromMap(String docId, Map<String, dynamic> data) {
     return Group(
@@ -40,9 +61,11 @@ class Group {
         totalBalance: (data['totalBalance'] ?? 0.0).toDouble(),
         goalAmount: (data['goalAmount'] ?? 0.0).toDouble(),
         goalDescription: data['goalDescription'] ?? '',
-        monthlyContribution: (data['monthlyContribution'] ?? 0.0).toDouble(),
+        contribution: (data['Contribution'] ?? 0.0).toDouble(),
         memberIds: List<String>.from(data['memberIds'] ?? []),
         createdAt: (data['createdAt'] as Timestamp).toDate(),
+        contributionFrequencyValue: data['contributionFrequencyValue'] ?? 1,
+        contributionFrequencyUnit: data['contributionFrequencyUnit'] ?? 'months',
     );
   }
   Map<String, dynamic> toMap() {
@@ -55,8 +78,10 @@ class Group {
       'totalBalance': totalBalance,
       'goalAmount': goalAmount,
       'goalDescription': goalDescription,
-      'monthlyContribution': monthlyContribution,
+      'contribution': contribution,
       'memberIds': memberIds,
+      'contributionFrequencyValue': contributionFrequencyValue,
+      'contributionFrequencyUnit': contributionFrequencyUnit,
       'createdAt': Timestamp.fromDate(createdAt), //firestore time
     };
   }
@@ -74,9 +99,11 @@ class Group {
     double? totalBalance,
     double? goalAmount,
     String? goalDescription,
-    double? monthlyContribution,
+    double? contribution,
     List<String>? memberIds,
     DateTime? createdAt,
+    int? contributionFrequencyValue,
+    String? contributionFrequencyUnit,
   }) {
     return Group(
       id: id ?? this.id,
@@ -88,8 +115,10 @@ class Group {
       totalBalance: totalBalance ?? this.totalBalance,
       goalAmount: goalAmount ?? this.goalAmount,
       goalDescription: goalDescription ?? this.goalDescription,
-      monthlyContribution: monthlyContribution ?? this.monthlyContribution,
+      contribution: contribution ?? this.contribution,
       memberIds: memberIds ?? this.memberIds,
+      contributionFrequencyValue: contributionFrequencyValue ?? this.contributionFrequencyValue,
+      contributionFrequencyUnit: contributionFrequencyUnit ?? this.contributionFrequencyUnit,
       createdAt: createdAt ?? this.createdAt,
     );
   }
