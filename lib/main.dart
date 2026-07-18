@@ -1,4 +1,3 @@
-//import 'package:dreamsacco/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,9 +7,13 @@ import 'screens/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Firebase already initialized, continue
+  }
   runApp(const MyApp());
 }
 
@@ -24,10 +27,11 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            primary: Color(0xFF0D47A1),
-            secondary: Color(0xFF42A5F5),
-            surface: Color(0xFFF0F8FF),),
+          seedColor: Colors.blue,
+          primary: const Color(0xFF0D47A1),
+          secondary: const Color(0xFF42A5F5),
+          surface: const Color(0xFFF0F8FF),
+        ),
         useMaterial3: true,
       ),
       home: StreamBuilder<User?>(
