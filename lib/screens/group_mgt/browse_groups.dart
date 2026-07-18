@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/group.dart';
 import '../../services/credit_score.dart';
+import 'public_group_preview.dart';
 
 class BrowseGroupsScreen extends StatelessWidget {
   const BrowseGroupsScreen({super.key});
@@ -43,21 +44,15 @@ class BrowseGroupsScreen extends StatelessWidget {
                 child: ListTile(
                   title: Text(group.name),
                   subtitle: Text(group.description),
-                  trailing: ElevatedButton(
-                    onPressed: () async {
-                      await groupService.submitJoinRequest(
-                        groupId: group.id,
-                        userId: _currentUserId,
-                        userName: _currentUserName,
-                      );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Join request sent!')),
-                        );
-                      }
-                    },
-                    child: const Text('Request to Join'),
-                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PublicGroupPreviewScreen(group: group),
+                      ),
+                    );
+                  },
                 ),
               );
             },

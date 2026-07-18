@@ -5,6 +5,7 @@ import '../../models/group.dart';
 import '../../models/member.dart';
 import 'join_requests.dart';
 import 'member_mgt.dart';
+import 'package:flutter/services.dart';
 
 class GroupDetailScreen extends StatelessWidget {
   final Group group;
@@ -47,6 +48,29 @@ class GroupDetailScreen extends StatelessWidget {
               );
             },
           ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () async {
+                final groupService = GroupService(creditScoreService: MockCreditScoreService());
+                await groupService.requestToLeaveGroup(
+                  groupId: group.id,
+                  userId: 'test_user_456', // TODO: replace with real logged-in user ID
+                  userName: 'Test User',
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Leave request sent to admin.')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.logout, size: 18, color: Colors.white),
+              label: const Text(
+                'Leave',
+                style: TextStyle(fontSize: 14, color: Colors.white),
+              ),
+            ),
+          ),
         ],
       ),
       body: Padding(
@@ -60,6 +84,26 @@ class GroupDetailScreen extends StatelessWidget {
             Text(
               'Contributions every ${group.contributionFrequencyValue} ${group.contributionFrequencyUnit}',
               style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Group ID: ${group.id}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: group.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Group ID copied!')),
+                    );
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(value: progress),

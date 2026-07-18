@@ -5,6 +5,8 @@ import '../../models/group.dart';
 import 'group_create.dart';
 import 'group_detail.dart';
 import 'browse_groups.dart';
+import 'join_by_id.dart';
+import 'notifications.dart';
 
 class GroupListScreen extends StatelessWidget {
   const GroupListScreen({super.key});
@@ -27,6 +29,24 @@ class GroupListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const BrowseGroupsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.key),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const JoinByIdScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotificationsScreen()),
               );
             },
           ),

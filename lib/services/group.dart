@@ -139,10 +139,14 @@ class GroupService {
     await _firestore.collection('groups').doc(groupId).update({
       'memberIds': FieldValue.arrayUnion([userId]),
     });
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
     await _sendNotification(
       targetUserId: userId,
-      message: 'Your request to join the group was approved!',
+      message: 'Your request to join $groupName was approved!',
       type: 'join_approved',
+      groupId: groupId,
+      groupName: groupName,
     );
   }
 
@@ -150,6 +154,7 @@ class GroupService {
     required String groupId,
     required String requestId,
     required String userId,
+    required String groupName,
   }) async {
     await _firestore
         .collection('groups')
@@ -160,8 +165,10 @@ class GroupService {
 
     await _sendNotification(
       targetUserId: userId,
-      message: 'Your request to join the group was not approved.',
+      message: 'Your request to join $groupName was not approved.',
       type: 'join_rejected',
+      groupId: groupId,
+      groupName: groupName,
     );
   }
   Future<void> updateMemberRole({
@@ -193,18 +200,143 @@ class GroupService {
       'memberIds': FieldValue.arrayRemove([userId]),
     });
   }
+  Future<void> joinGroupByGroupId({
+    required String groupId,
+    required String userId,
+  }) async {
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+
+    if (!groupDoc.exists) {
+      throw Exception('Group not found. Check the ID and try again.');
+    }
+
+    await _addMemberToGroup(
+      groupId: groupId,
+      userId: userId,
+      role: 'member',
+    );
+
+    await _firestore.collection('groups').doc(groupId).update({
+      'memberIds': FieldValue.arrayUnion([userId]),
+    });
+  }
+  Future<void> requestToLeaveGroup({
+    required String groupId,
+    required String userId,
+    required String userName,
+  }) async {
+    CollectionReference leaveRequestsRef = _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('leaveRequests');
+
+    await leaveRequestsRef.doc(userId).set({
+      'userId': userId,
+      'userName': userName,
+      'status': 'pending',
+      'requestedAt': Timestamp.now(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getPendingLeaveRequests(String groupId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('leaveRequests')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => {'id': doc.id, ...doc.data()})
+        .toList());
+  }
+
+  Future<void> approveLeaveRequest({
+    required String groupId,
+    required String requestId,
+    required String userId,
+  }) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('leaveRequests')
+        .doc(requestId)
+        .update({'status': 'approved'});
+
+    await removeMember(groupId: groupId, userId: userId);
+
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
+
+    await _sendNotification(
+      targetUserId: userId,
+      message: 'You have left $groupName.',
+      type: 'leave_approved',
+      groupId: groupId,
+      groupName: groupName,
+    );
+  }
+
+  Future<void> rejectLeaveRequest({
+    required String groupId,
+    required String requestId,
+    required String userId,
+  }) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('leaveRequests')
+        .doc(requestId)
+        .update({'status': 'rejected'});
+
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
+
+    await _sendNotification(
+      targetUserId: userId,
+      message: 'Your request to leave $groupName was declined.',
+      type: 'leave_rejected',
+      groupId: groupId,
+      groupName: groupName,
+    );
+  }
   Future<void> _sendNotification({
     required String targetUserId,
     required String message,
     required String type,
+    String? groupId,
+    String? groupName,
   }) async {
     await _firestore.collection('notifications').add({
       'type': type,
       'message': message,
       'targetUserId': targetUserId,
+      'groupId': groupId ?? '',
+      'groupName': groupName ?? '',
       'sentAt': Timestamp.now(),
       'read': false,
     });
+  }
+  Stream<List<Map<String, dynamic>>> getNotificationsForUser(String userId) {
+    return _firestore
+        .collection('notifications')
+        .where('targetUserId', isEqualTo: userId)
+        .orderBy('sentAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => {
+      'id': doc.id,
+      ...doc.data(),
+    })
+        .toList());
+  }
+
+  Future<void> markNotificationAsRead(String notificationId) async {
+    await _firestore.collection('notifications').doc(notificationId).update({
+      'read': true,
+    });
+  }
+  Future<void> deleteNotification(String notificationId) async {
+    await _firestore.collection('notifications').doc(notificationId).delete();
   }
   Stream<List<Group>> getPublicGroups() {
     return _firestore
