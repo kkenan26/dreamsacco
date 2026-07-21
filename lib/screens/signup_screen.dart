@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'otp_screen.dart';
+import 'home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -40,38 +40,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
       phone: '+256$phone',
     );
 
-    if (uid == null) {
-      setState(() => _isLoading = false);
-      if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (uid!= null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false,
+      );
+    }else{
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sign up failed. Email may already be in use :/')),
       );
-      return;
     }
 
-    await _authService.sendOTP(
-      phoneNumber: '+256$phone',
-      onCodeSent: (verificationId) {
-        setState(() => _isLoading = false);
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OTPScreen(
-              verificationId: verificationId,
-              phoneNumber: '+256$phone',
-            ),
-          ),
-        );
-      },
-      onError: (error) {
-        setState(() => _isLoading = false);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
-      },
-    );
   }
 
   @override

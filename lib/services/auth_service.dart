@@ -48,45 +48,12 @@ class AuthService {
           password: password,);
       return result.user?.uid;
     } catch (e) {
+      print('Login Error: $e');
       return null;
     }
   }
 
-//3)Enter OTP sent
-  Future<void> sendOTP({
-    required String phoneNumber,
-    required Function(String verificationId) onCodeSent,
-    required Function(String error) onError,
-}) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (PhoneAuthCredential credential) {},
-      verificationFailed: (FirebaseAuthException e) {
-        onError(e.message ?? 'Verification Failed');
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        onCodeSent(verificationId);
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
-  }
 
-//4) Verifying OTP
-  Future<bool> verifyOTP({
-    required String verificationId,
-    required String otp,
-}) async {
-    try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: otp,
-      );
-      await _auth.currentUser?.linkWithCredential(credential);
-      return true;
-    } catch (e){
-      return false;
-    }
-  }
 
 //5) Signing out
   Future<void> signOut() async {
