@@ -1,5 +1,6 @@
 // lib/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'credit_scoring_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -108,10 +109,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _handleServiceTap(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title tapped')),
-    );
-  }
+    if (title== "Credit Score"|| title== "Savings Goals"){
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context)=> const CreditScoreScreen()),
+      );
+    }else{
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$title tapped')),
+      );
+    }
+}
 
   @override
   Widget build(BuildContext context) {
