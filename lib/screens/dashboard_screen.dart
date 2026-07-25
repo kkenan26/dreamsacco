@@ -1,5 +1,8 @@
 // lib/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'credit_scoring_screen.dart';
+import 'loan_request_screen.dart';
+import 'loan_status_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -102,16 +105,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _handleQuickAction(String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$action tapped')),
-    );
+    if (action=="Loan"){
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder:(context) => const LoanRequestScreen()),
+      );
+    }else{
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$action tapped')),
+      );
+    }
   }
 
   void _handleServiceTap(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title tapped')),
-    );
-  }
+    if (title== "Credit Score"|| title== "Savings Goals"){
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context)=> const CreditScoreScreen()),
+      );
+    }
+    else if (title== "Risk Alerts"){
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
+      );
+    }
+
+    else if(title=="Calculator") {
+      //This is opening the loan request and schedule screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoanRequestScreen()),
+      );
+    }
+    else{
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$title tapped')),
+      );
+    }
+}
 
   @override
   Widget build(BuildContext context) {
