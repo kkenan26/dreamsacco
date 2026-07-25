@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 
@@ -25,8 +26,7 @@ Future<bool> _confirmAction(BuildContext context, String title, String message) 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  static const String _currentUserId = 'test_user_456';
+  String get _currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
   IconData _iconForType(String type) {
     switch (type) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 import '../../models/group.dart';
@@ -53,10 +54,12 @@ class GroupDetailScreen extends StatelessWidget {
             child: TextButton.icon(
               onPressed: () async {
                 final groupService = GroupService(creditScoreService: MockCreditScoreService());
+                String userId = FirebaseAuth.instance.currentUser!.uid;
+                String userName = await groupService.getUserName(userId);
                 await groupService.requestToLeaveGroup(
                   groupId: group.id,
-                  userId: 'test_user_456', // TODO: replace with real logged-in user ID
-                  userName: 'Test User',
+                  userId: userId,
+                  userName: userName,
                 );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 import '../../models/group.dart';
@@ -27,8 +28,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     creditScoreService: MockCreditScoreService(),
   );
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  final String _currentUserId = 'test_admin_123';
+
+  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void dispose() {

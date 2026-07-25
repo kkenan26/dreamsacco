@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 
@@ -13,8 +14,7 @@ class _JoinByIdScreenState extends State<JoinByIdScreen> {
   final _idController = TextEditingController();
   bool _isSubmitting = false;
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  final String _currentUserId = 'test_user_456';
+  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   final GroupService _groupService = GroupService(
     creditScoreService: MockCreditScoreService(),

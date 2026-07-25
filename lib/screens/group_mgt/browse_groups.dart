@@ -7,10 +7,6 @@ import 'public_group_preview.dart';
 class BrowseGroupsScreen extends StatelessWidget {
   const BrowseGroupsScreen({super.key});
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  static const String _currentUserId = 'test_user_456';
-  static const String _currentUserName = 'Test User';
-
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(

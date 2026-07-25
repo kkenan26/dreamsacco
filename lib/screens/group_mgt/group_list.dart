@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 import '../../models/group.dart';
@@ -11,7 +12,7 @@ import 'notifications.dart';
 class GroupListScreen extends StatelessWidget {
   const GroupListScreen({super.key});
 
-  static const String _currentUserId = 'test_admin_123';
+  String get _currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +66,7 @@ class GroupListScreen extends StatelessWidget {
           final groups = snapshot.data ?? [];
 
           if (groups.isEmpty) {
-            return const Center(child: Text('No groups yet. Create one!'));
+            return const Center(child: Text('No groups yet. Create one or join now!'));
           }
 
           return ListView.builder(

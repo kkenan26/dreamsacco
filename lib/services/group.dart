@@ -370,4 +370,13 @@ class GroupService {
         .map((doc) => Group.fromMap(doc.id, doc.data()))
         .toList());
   }
+  Future<String> getUserName(String userId) async {
+    DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+      return data['fullName'] ?? data['name'] ?? 'Unknown User';
+      // ^ checks both possible field names so it works either way
+    }
+    return 'Unknown User';
+  }
 }

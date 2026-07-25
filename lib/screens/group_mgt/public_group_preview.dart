@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../models/group.dart';
 import '../../services/credit_score.dart';
@@ -15,10 +16,6 @@ class PublicGroupPreviewScreen extends StatefulWidget {
 class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
   bool _isSubmitting = false;
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  static const String _currentUserId = 'test_user_456';
-  static const String _currentUserName = 'Test User';
-
   final GroupService _groupService = GroupService(
     creditScoreService: MockCreditScoreService(),
   );
@@ -26,10 +23,13 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
   Future<void> _requestToJoin() async {
     setState(() => _isSubmitting = true);
     try {
+      String userId = FirebaseAuth.instance.currentUser!.uid;
+      String userName = await _groupService.getUserName(userId);
+
       await _groupService.submitJoinRequest(
         groupId: widget.group.id,
-        userId: _currentUserId,
-        userName: _currentUserName,
+        userId: userId,
+        userName: userName,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
