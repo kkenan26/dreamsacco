@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_request_screen.dart';
+import 'loan_status_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -122,7 +123,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context,
         MaterialPageRoute(builder: (context)=> const CreditScoreScreen()),
       );
-    }else if(title=="Calculator") {
+    }
+    else if (title== "Risk Alerts"){
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
+      );
+    }
+
+    else if(title=="Calculator") {
       //This is opening the loan request and schedule screen
       Navigator.push(
         context,
