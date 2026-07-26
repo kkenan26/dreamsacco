@@ -29,11 +29,11 @@ class Member{
 }
   Map<String, dynamic> toMap() {
     return {
+      'userId': userId,
       'role': role,
       'status': status,
       'riskFlag': riskFlag,
-      'shares': shares,
       'joinedAt': Timestamp.fromDate(joinedAt),
     };
-    }
+  }
 }

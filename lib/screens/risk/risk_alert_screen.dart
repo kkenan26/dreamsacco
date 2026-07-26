@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 enum RiskLevel { low, medium, high }
 
@@ -24,25 +27,68 @@ class RiskAlertScreen extends StatefulWidget {
 class _RiskAlertScreenState extends State<RiskAlertScreen> {
   static const Color primaryColor = Color(0xFF0D47A1);
 
-  // Mock contribution history, most recent last.
-  final List<MonthlyContribution> history = [
-    MonthlyContribution(month: "Feb 2026", amount: 120000, paid: true),
-    MonthlyContribution(month: "Mar 2026", amount: 100000, paid: true),
-    MonthlyContribution(month: "Apr 2026", amount: 70000, paid: true),
-    MonthlyContribution(month: "May 2026", amount: 0, paid: false),
-    MonthlyContribution(month: "Jun 2026", amount: 0, paid: false),
-    MonthlyContribution(month: "Jul 2026", amount: 40000, paid: true),
-  ];
+  List<MonthlyContribution> history = [];
+  bool _isLoading = true;
 
-  late RiskLevel riskLevel;
-  late List<String> triggeredFactors;
-  late List<String> recommendations;
+  RiskLevel riskLevel = RiskLevel.low;
+  List<String> triggeredFactors = [];
+  List<String> recommendations = [];
 
   @override
   void initState() {
     super.initState();
-    _assessRisk();
+    _loadHistory();
   }
+
+  Future<void> _loadHistory() async {
+    try {
+      String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      QuerySnapshot memberGroups = await FirebaseFirestore.instance
+          .collectionGroup('members')
+          .where('userId', isEqualTo: uid)
+          .limit(1)
+          .get();
+
+      if (memberGroups.docs.isEmpty) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      String groupId = memberGroups.docs.first.reference.parent.parent!.id;
+
+      QuerySnapshot contributions = await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .collection('contributions')
+          .where('userId', isEqualTo: uid)
+          .orderBy('paidAt', descending: false)
+          .limit(6)
+          .get();
+
+      List<MonthlyContribution> loaded = contributions.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        return MonthlyContribution(
+          month: data['month'] ?? '',
+          amount: (data['amount'] ?? 0).toDouble(),
+          paid: data['status'] == 'paid',
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          history = loaded;
+          _isLoading = false;
+        });
+      }
+
+      _assessRisk();
+    } catch (e) {
+      debugPrint('Risk alert load error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+
 
   int get missedContributions => history.where((h) => !h.paid).length;
 
@@ -193,7 +239,9 @@ class _RiskAlertScreenState extends State<RiskAlertScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,14 +262,28 @@ class _RiskAlertScreenState extends State<RiskAlertScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _buildTrendChart(),
+            history.isEmpty
+                ? Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                "No contributions yet.",
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            )
+                : _buildTrendChart(),
             const SizedBox(height: 24),
             const Text(
               "Recommendations",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ...recommendations.map((r) => _recommendationTile(r)),
+            recommendations.isEmpty
+                ? Text("No recommendations yet.", style: TextStyle(color: Colors.grey.shade600))
+                : Column(children: recommendations.map((r) => _recommendationTile(r)).toList()),
           ],
         ),
       ),

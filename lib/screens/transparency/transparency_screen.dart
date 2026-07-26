@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ContributionRecord {
   final String month;
@@ -24,25 +26,17 @@ class _TransparencyScreenState extends State<TransparencyScreen>
   static const Color primaryColor = Color(0xFF0D47A1);
   static const Color secondaryColor = Color(0xFF1976D2);
 
-  final double totalSavings = 850000;
-  final double availableBalance = 620000;
-  final String contributionStatus = "PAID";
-  final double monthlyAverage = 95000;
-  final double totalContributed = 1140000;
-  final int activeMonths = 12;
+  double totalSavings = 0;
+  double availableBalance = 0;
+  String contributionStatus = "UNPAID";
+  double monthlyAverage = 0;
+  double totalContributed = 0;
+  int activeMonths = 0;
+  List<ContributionRecord> history = [];
+  bool _isLoading = true;
 
   late AnimationController _animController;
   late Animation<double> _progressAnimation;
-
-  final List<ContributionRecord> history = [
-    ContributionRecord(month: "Jul 2026", amount: 95000, paid: true),
-    ContributionRecord(month: "Jun 2026", amount: 95000, paid: true),
-    ContributionRecord(month: "May 2026", amount: 90000, paid: true),
-    ContributionRecord(month: "Apr 2026", amount: 100000, paid: true),
-    ContributionRecord(month: "Mar 2026", amount: 85000, paid: true),
-    ContributionRecord(month: "Feb 2026", amount: 0, paid: false),
-    ContributionRecord(month: "Jan 2026", amount: 92000, paid: true),
-  ];
 
   @override
   void initState() {
@@ -55,6 +49,62 @@ class _TransparencyScreenState extends State<TransparencyScreen>
       parent: _animController,
       curve: Curves.easeOutCubic,
     );
+    _loadTransparencyData();
+  }
+
+  Future<void> _loadTransparencyData() async {
+    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    QuerySnapshot memberGroups = await FirebaseFirestore.instance
+        .collectionGroup('members')
+        .where('userId', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (memberGroups.docs.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    String groupId = memberGroups.docs.first.reference.parent.parent!.id;
+
+    DocumentSnapshot groupDoc = await FirebaseFirestore.instance.collection('groups').doc(groupId).get();
+    double balance = 0;
+    if (groupDoc.exists) {
+      balance = ((groupDoc.data() as Map<String, dynamic>)['totalBalance'] ?? 0).toDouble();
+    }
+
+    QuerySnapshot contributions = await FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupId)
+        .collection('contributions')
+        .where('userId', isEqualTo: uid)
+        .orderBy('paidAt', descending: true)
+        .limit(7)
+        .get();
+
+    List<ContributionRecord> loaded = contributions.docs.map((doc) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      return ContributionRecord(
+        month: data['month'] ?? '',
+        amount: (data['amount'] ?? 0).toDouble(),
+        paid: data['status'] == 'paid',
+      );
+    }).toList();
+
+    double sumPaid = loaded.where((h) => h.paid).fold(0.0, (a, b) => a + b.amount);
+    int paidCount = loaded.where((h) => h.paid).length;
+
+    setState(() {
+      totalSavings = balance;
+      availableBalance = balance;
+      contributionStatus = loaded.isNotEmpty && loaded.first.paid ? 'PAID' : 'UNPAID';
+      monthlyAverage = paidCount > 0 ? sumPaid / paidCount : 0;
+      totalContributed = sumPaid;
+      activeMonths = paidCount;
+      history = loaded.reversed.toList();
+      _isLoading = false;
+    });
+
     _animController.forward();
   }
 

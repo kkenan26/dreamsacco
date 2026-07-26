@@ -46,7 +46,12 @@ class NotificationsScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w600))),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: groupService.getNotificationsForUser(_currentUserId),
         builder: (context, snapshot) {

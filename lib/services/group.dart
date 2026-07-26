@@ -433,4 +433,63 @@ class GroupService {
   Future<double> getCreditScoreForDisplay(String userId) async {
     return await _creditScoreService.getCreditScore(userId);
   }
+  Stream<List<Map<String, dynamic>>> getPendingLoanRequests(String groupId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => {'id': doc.id, ...doc.data()})
+        .toList());
+  }
+
+  Future<void> approveLoanRequest({
+    required String groupId,
+    required String loanId,
+    required String requesterId,
+  }) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .doc(loanId)
+        .update({'status': 'approved'});
+
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
+
+    await _sendNotification(
+      targetUserId: requesterId,
+      message: 'Your loan request in $groupName was approved!',
+      type: 'loan_approved',
+      groupId: groupId,
+      groupName: groupName,
+    );
+  }
+
+  Future<void> rejectLoanRequest({
+    required String groupId,
+    required String loanId,
+    required String requesterId,
+  }) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .doc(loanId)
+        .update({'status': 'rejected'});
+
+    DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
+    String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
+
+    await _sendNotification(
+      targetUserId: requesterId,
+      message: 'Your loan request in $groupName was not approved.',
+      type: 'loan_rejected',
+      groupId: groupId,
+      groupName: groupName,
+    );
+  }
 }

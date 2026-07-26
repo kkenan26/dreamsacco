@@ -55,7 +55,12 @@ class _JoinByIdScreenState extends State<JoinByIdScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Join Group by ID')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Join Group by ID', style: TextStyle(fontWeight: FontWeight.w600))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

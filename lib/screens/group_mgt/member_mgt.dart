@@ -37,7 +37,12 @@ class MemberManagementScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Members')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Manage Members', style: TextStyle(fontWeight: FontWeight.w600))),
       body: StreamBuilder<List<Member>>(
         stream: groupService.getGroupMembers(groupId),
         builder: (context, snapshot) {

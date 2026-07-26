@@ -84,7 +84,12 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
         : 0.0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(group.name)),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
