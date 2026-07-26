@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 import '../../models/group.dart';
 
 class CreateGroupScreen extends StatefulWidget {
@@ -19,16 +20,21 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _goalDescriptionController = TextEditingController();
   final _contributionController = TextEditingController();
   final _frequencyValueController = TextEditingController(text: '1');
-  String _selectedType = 'public'; // dropdown default
+  final _treasurerIdController = TextEditingController();
+  final _treasurerMobileMoneyController = TextEditingController();
+  final _totalSharesController = TextEditingController();
+  final _contributionPerShareController = TextEditingController();
+
+  String _selectedType = 'public';
   String _selectedFrequencyUnit = 'months';
+  bool _isShareBased = false;
   bool _isSubmitting = false;
 
   final GroupService _groupService = GroupService(
-    creditScoreService: CreditScoreService(),
+    creditScoreService: RealCreditScoreAdapter(),
   );
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  final String _currentUserId = 'test_admin_123';
+  String get _currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void dispose() {
@@ -38,11 +44,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     _goalDescriptionController.dispose();
     _contributionController.dispose();
     _frequencyValueController.dispose();
+    _treasurerIdController.dispose();
+    _treasurerMobileMoneyController.dispose();
+    _totalSharesController.dispose();
+    _contributionPerShareController.dispose();
     super.dispose();
   }
 
   Future<void> _submitForm() async {
-    // Validate all fields first
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
@@ -53,23 +62,29 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         description: _descriptionController.text.trim(),
         type: _selectedType,
         adminId: _currentUserId,
-        treasurerId: _currentUserId, // admin is treasurer until reassigned later
+        treasurerId: _treasurerIdController.text.trim(),
+        treasurerMobileMoney: _treasurerMobileMoneyController.text.trim(),
         goalAmount: double.parse(_goalAmountController.text.trim()),
         goalDescription: _goalDescriptionController.text.trim(),
-        contribution: double.parse(_contributionController.text.trim()),
+        contribution: _isShareBased
+            ? 0.0
+            : double.parse(_contributionController.text.trim()),
         contributionFrequencyValue: int.parse(_frequencyValueController.text.trim()),
         contributionFrequencyUnit: _selectedFrequencyUnit,
+        isShareBased: _isShareBased,
+        totalShares: _isShareBased ? int.parse(_totalSharesController.text.trim()) : 0,
+        contributionPerShare: _isShareBased
+            ? double.parse(_contributionPerShareController.text.trim())
+            : 0.0,
       );
 
       String newGroupId = await _groupService.createGroup(newGroup);
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Group created! ID: $newGroupId')),
       );
-
-      Navigator.pop(context); // go back to wherever Group List will live
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +98,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Group')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Create Group', style: TextStyle(fontWeight: FontWeight.w600))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -111,9 +131,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   DropdownMenuItem(value: 'public', child: Text('Public')),
                   DropdownMenuItem(value: 'private', child: Text('Private')),
                 ],
-                onChanged: (value) {
-                  setState(() => _selectedType = value!);
-                },
+                onChanged: (value) => setState(() => _selectedType = value!),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -133,17 +151,69 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 validator: (value) =>
                 (value == null || value.trim().isEmpty) ? 'Enter a goal description' : null,
               ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const Text('Treasurer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _treasurerIdController,
+                decoration: const InputDecoration(labelText: 'Treasurer User ID'),
+                validator: (value) =>
+                (value == null || value.trim().isEmpty) ? 'Enter the treasurer\'s user ID' : null,
+              ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _contributionController,
-                decoration: const InputDecoration(labelText: 'Contribution Amount (UGX)'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Enter an amount';
-                  if (double.tryParse(value.trim()) == null) return 'Enter a valid number';
-                  return null;
-                },
+                controller: _treasurerMobileMoneyController,
+                decoration: const InputDecoration(labelText: 'Treasurer Mobile Money Number'),
+                keyboardType: TextInputType.phone,
+                validator: (value) =>
+                (value == null || value.trim().isEmpty) ? 'Enter a mobile money number' : null,
               ),
+              const SizedBox(height: 20),
+              const Divider(),
+              SwitchListTile(
+                title: const Text('Share-Based Group?'),
+                subtitle: const Text('Members join by requesting a percentage of shares'),
+                value: _isShareBased,
+                onChanged: (value) => setState(() => _isShareBased = value),
+              ),
+              const SizedBox(height: 12),
+              if (_isShareBased) ...[
+                TextFormField(
+                  controller: _totalSharesController,
+                  decoration: const InputDecoration(labelText: 'Total Shares'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (!_isShareBased) return null;
+                    if (value == null || value.trim().isEmpty) return 'Enter total shares';
+                    if (int.tryParse(value.trim()) == null) return 'Enter a valid number';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _contributionPerShareController,
+                  decoration: const InputDecoration(labelText: 'Contribution Per Share (UGX)'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (!_isShareBased) return null;
+                    if (value == null || value.trim().isEmpty) return 'Enter amount per share';
+                    if (double.tryParse(value.trim()) == null) return 'Enter a valid number';
+                    return null;
+                  },
+                ),
+              ] else
+                TextFormField(
+                  controller: _contributionController,
+                  decoration: const InputDecoration(labelText: 'Contribution Amount (UGX)'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (_isShareBased) return null;
+                    if (value == null || value.trim().isEmpty) return 'Enter an amount';
+                    if (double.tryParse(value.trim()) == null) return 'Enter a valid number';
+                    return null;
+                  },
+                ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -169,9 +239,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         DropdownMenuItem(value: 'weeks', child: Text('Weeks')),
                         DropdownMenuItem(value: 'months', child: Text('Months')),
                       ],
-                      onChanged: (value) {
-                        setState(() => _selectedFrequencyUnit = value!);
-                      },
+                      onChanged: (value) => setState(() => _selectedFrequencyUnit = value!),
                     ),
                   ),
                 ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 class JoinByIdScreen extends StatefulWidget {
   const JoinByIdScreen({super.key});
@@ -13,11 +14,10 @@ class _JoinByIdScreenState extends State<JoinByIdScreen> {
   final _idController = TextEditingController();
   bool _isSubmitting = false;
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  final String _currentUserId = 'test_user_456';
+  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   final GroupService _groupService = GroupService(
-    creditScoreService: CreditScoreService(),
+    creditScoreService: RealCreditScoreAdapter(),
   );
 
   @override
@@ -55,7 +55,12 @@ class _JoinByIdScreenState extends State<JoinByIdScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Join Group by ID')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Join Group by ID', style: TextStyle(fontWeight: FontWeight.w600))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

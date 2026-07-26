@@ -1,11 +1,12 @@
+// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import 'contribution_screen.dart';
 import 'credit_scoring_screen.dart';
-import 'loan_request_screen.dart';
-import 'loan_status_screen.dart';
+import 'loan_screen.dart';
 import 'goals/goal_screen.dart';
 import 'milestones/milestone_screen.dart';
 import 'risk/risk_alert_screen.dart';
@@ -14,7 +15,8 @@ import 'transparency/transparency_screen.dart';
 import 'whatif/what_if_calculator_screen.dart';
 import 'group_mgt/group_list.dart';
 import 'welcome_screen.dart';
-
+import 'group_mgt/notifications.dart';
+import 'loan_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -25,7 +27,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final AuthService _authService = AuthService();
   bool hideBalance = false;
-  int currentIndex = 0;
 
   String userName = "Loading...";
   String memberId = "";
@@ -43,65 +44,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _loadDashboardData() async {
-    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    try {
+      String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
 
-    if (!userDoc.exists || !mounted) return;
+      if (!userDoc.exists || !mounted) return;
 
-    Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+      Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
 
-    String groupId = '';
-    String contribution = 'UNPAID';
+      String groupId = '';
+      String contribution = 'UNPAID';
 
-    QuerySnapshot memberGroups = await FirebaseFirestore.instance
-        .collectionGroup('members')
-        .where(FieldPath.documentId, isEqualTo: uid)
-        .limit(1)
-        .get();
-
-    if (memberGroups.docs.isNotEmpty) {
-      groupId = memberGroups.docs.first.reference.parent.parent!.id;
-
-      String month =
-          '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
-
-      QuerySnapshot contributions = await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(groupId)
-          .collection('contributions')
+      QuerySnapshot memberGroups = await FirebaseFirestore.instance
+          .collectionGroup('members')
           .where('userId', isEqualTo: uid)
-          .where('month', isEqualTo: month)
           .limit(1)
           .get();
 
-      if (contributions.docs.isNotEmpty) {
-        contribution = 'PAID';
+      if (memberGroups.docs.isNotEmpty) {
+        groupId = memberGroups.docs.first.reference.parent.parent!.id;
+
+        String month =
+            '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
+
+        QuerySnapshot contributions = await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(groupId)
+            .collection('contributions')
+            .where('userId', isEqualTo: uid)
+            .where('month', isEqualTo: month)
+            .limit(1)
+            .get();
+
+        if (contributions.docs.isNotEmpty) {
+          contribution = 'PAID';
+        }
       }
+
+      int totalContributions =
+          (data['totalContributions'] as num?)?.toInt() ?? 0;
+      int loanLimitVal = (data['loanLimit'] as num?)?.toInt() ?? 0;
+      int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
+      int streak = (data['contributionStreak'] as num?)?.toInt() ?? 0;
+
+      if (!mounted) return;
+      setState(() {
+        userName = data['name'] ?? 'User';
+        memberId = uid.substring(0, 6).toUpperCase();
+        savingsAmount =
+        "UGX ${totalContributions.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
+        loanAmount =
+        "UGX ${loanLimitVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
+        contributionStatus = contribution;
+        savingsGoal = "$creditScore% Score";
+        riskAlert = streak > 2 ? "Good Standing" : "Build Your Streak";
+        milestones = "$streak Month Streak";
+      });
+    } catch (e) {
+      debugPrint('Dashboard load error: $e');
     }
-
-    int totalContributions =
-        (data['totalContributions'] as num?)?.toInt() ?? 0;
-    int loanLimitVal = (data['loanLimit'] as num?)?.toInt() ?? 0;
-    int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
-    int streak = (data['contributionStreak'] as num?)?.toInt() ?? 0;
-
-    if (!mounted) return;
-    setState(() {
-      userName = data['name'] ?? 'User';
-      memberId = uid.substring(0, 6).toUpperCase();
-      savingsAmount =
-      "UGX ${totalContributions.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
-      loanAmount =
-      "UGX ${loanLimitVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
-      contributionStatus = contribution;
-      savingsGoal = "$creditScore% Score";
-      riskAlert = streak > 2 ? "Good Standing" : "Build Your Streak";
-      milestones = "$streak Month Streak";
-    });
   }
 
   String getGreeting() {
@@ -197,9 +202,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ],
         ),
@@ -217,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => const LoanRequestScreen()));
+              builder: (context) => const LoanScreen()));
     } else if (action == "Groups") {
       Navigator.push(
           context,
@@ -227,7 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => const LoanStatusScreen()));
+              builder: (context) => const LoanScreen()));
     } else if (action == "Sign Out") {
       await _authService.signOut();
       if (!mounted) return;
@@ -288,9 +294,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const GroupListScreen())),
-            icon: const Icon(Icons.group),
+                MaterialPageRoute(builder: (context) => const NotificationsScreen())),
+            icon: const Icon(Icons.notifications),
           ),
           IconButton(
             onPressed: _showSignOutDialog,
@@ -418,37 +423,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 16),
                   Chip(
-                    avatar: Icon(
-                      contributionStatus == "PAID"
-                          ? Icons.check_circle
-                          : Icons.warning,
-                      color: contributionStatus == "PAID"
-                          ? Colors.green
-                          : Colors.orange,
+                    avatar: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
                       size: 18,
                     ),
                     label: Text(
-                        "Contributions: $contributionStatus",
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D47A1))),
+                      "Contributions: $contributionStatus",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D47A1),
+                      ),
+                    ),
                     backgroundColor: Colors.white,
                     side: BorderSide.none,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 8),
-                  )
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            // Quick Actions
-            const Text("Quick Actions",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+            // Quick Actions Section
+            const Text(
+              "Quick Actions",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 12),
             Center(
               child: Wrap(
@@ -459,8 +464,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _quick(Icons.add_card, "Deposit"),
                   _quick(Icons.request_page, "Loan"),
                   _quick(Icons.group, "Groups"),
-                  _quick(Icons.hourglass_top, "Loan Status"),
-                  _quick(Icons.logout, "Sign Out"),
                 ],
               ),
             ),
@@ -531,39 +534,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (i) {
-          setState(() => currentIndex = i);
-          if (i == 1) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const GroupListScreen()));
-          } else if (i == 2) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                    const LoanRequestScreen()));
-          }
-        },
-        selectedItemColor: const Color(0xFF0D47A1),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group),
-            label: 'Groups',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance),
-            label: 'Loans',
-          ),
-        ],
       ),
     );
   }

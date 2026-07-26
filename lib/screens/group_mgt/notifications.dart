@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
   final result = await showDialog<bool>(
@@ -25,8 +26,7 @@ Future<bool> _confirmAction(BuildContext context, String title, String message) 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  static const String _currentUserId = 'test_user_456';
+  String get _currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
   IconData _iconForType(String type) {
     switch (type) {
@@ -42,11 +42,16 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w600))),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: groupService.getNotificationsForUser(_currentUserId),
         builder: (context, snapshot) {

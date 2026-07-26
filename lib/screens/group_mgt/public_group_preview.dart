@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../models/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 class PublicGroupPreviewScreen extends StatefulWidget {
   final Group group;
@@ -14,22 +15,51 @@ class PublicGroupPreviewScreen extends StatefulWidget {
 
 class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
   bool _isSubmitting = false;
+  final _sharesController = TextEditingController();
 
-  // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
-  static const String _currentUserId = 'test_user_456';
-  static const String _currentUserName = 'Test User';
 
   final GroupService _groupService = GroupService(
-    creditScoreService: CreditScoreService(),
+    creditScoreService: RealCreditScoreAdapter(),
   );
 
+  @override
+  void dispose() {
+    _sharesController.dispose();
+    super.dispose();
+  }
+
   Future<void> _requestToJoin() async {
+    double sharesRequested = 0.0;
+
+    if (widget.group.isShareBased) {
+      if (_sharesController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a share percentage to request.')),
+        );
+        return;
+      }
+      double percent = double.tryParse(_sharesController.text.trim()) ?? 0;
+      sharesRequested = (percent / 100) * widget.group.totalShares;
+
+      int remainingShares = widget.group.totalShares - widget.group.sharesTaken;
+      if (sharesRequested > remainingShares) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Only $remainingShares shares remaining.')),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSubmitting = true);
     try {
+      String userId = FirebaseAuth.instance.currentUser!.uid;
+      String userName = await _groupService.getUserName(userId);
+
       await _groupService.submitJoinRequest(
         groupId: widget.group.id,
-        userId: _currentUserId,
-        userName: _currentUserName,
+        userId: userId,
+        userName: userName,
+        sharesRequested: sharesRequested,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,7 +84,12 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
         : 0.0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(group.name)),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -73,6 +108,18 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
             Text(
               'Contribution Amount: UGX ${group.contribution.toStringAsFixed(0)} every ${group.contributionFrequencyValue} ${group.contributionFrequencyUnit}',
             ),
+            if (group.isShareBased) ...[
+              Text(
+                'Shares available: ${group.totalShares - group.sharesTaken} / ${group.totalShares}',
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _sharesController,
+                decoration: const InputDecoration(labelText: 'Percentage of shares to request (%)'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+            ],
             const SizedBox(height: 24),
             _isSubmitting
                 ? const Center(child: CircularProgressIndicator())

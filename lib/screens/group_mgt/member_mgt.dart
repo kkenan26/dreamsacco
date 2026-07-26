@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/member.dart';
-import '../../services/credit_score_service.dart';
+import 'profile.dart';
+import '../../services/adapter.dart';
+
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
   final result = await showDialog<bool>(
@@ -31,11 +33,16 @@ class MemberManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Members')),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Manage Members', style: TextStyle(fontWeight: FontWeight.w600))),
       body: StreamBuilder<List<Member>>(
         stream: groupService.getGroupMembers(groupId),
         builder: (context, snapshot) {
@@ -57,49 +64,68 @@ class MemberManagementScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final member = members[index];
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  title: Text(member.userId),
-                  subtitle: Text('Status: ${member.status}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButton<String>(
-                        value: member.role,
-                        items: const [
-                          DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                          DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
-                          DropdownMenuItem(value: 'member', child: Text('Member')),
+              return FutureBuilder<String>(
+                future: groupService.getUserName(member.userId),
+                builder: (context, nameSnapshot) {
+                  final displayName = nameSnapshot.data ?? member.userId;
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(
+                      title: Text(displayName),
+                      subtitle: Text(
+                        member.shares > 0
+                            ? 'Status: ${member.status} · Shares: ${member.shares.toStringAsFixed(1)}'
+                            : 'Status: ${member.status}',
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileScreen(userId: member.userId),
+                          ),
+                        );
+                      },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DropdownButton<String>(
+                            value: member.role,
+                            items: const [
+                              DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                              DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
+                              DropdownMenuItem(value: 'member', child: Text('Member')),
+                            ],
+                            onChanged: (newRole) async {
+                              if (newRole == null) return;
+                              await groupService.updateMemberRole(
+                                groupId: groupId,
+                                userId: member.userId,
+                                newRole: newRole,
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              bool confirmed = await _confirmAction(
+                                context,
+                                'Remove Member?',
+                                'This will remove $displayName from the group.',
+                              );
+                              if (confirmed) {
+                                await groupService.removeMember(
+                                  groupId: groupId,
+                                  userId: member.userId,
+                                );
+                              }
+                            },
+                          ),
                         ],
-                        onChanged: (newRole) async {
-                          if (newRole == null) return;
-                          await groupService.updateMemberRole(
-                            groupId: groupId,
-                            userId: member.userId,
-                            newRole: newRole,
-                          );
-                        },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          bool confirmed = await _confirmAction(
-                            context,
-                            'Remove Member?',
-                            'This will remove ${member.userId} from the group.',
-                          );
-                          if (confirmed) {
-                            await groupService.removeMember(
-                              groupId: groupId,
-                              userId: member.userId,
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );

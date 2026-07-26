@@ -14,7 +14,12 @@ class Group {
   final List<String> memberIds;
   final DateTime createdAt;
   final int contributionFrequencyValue;
-  final String contributionFrequencyUnit; //days,weeks
+  final String contributionFrequencyUnit;//days,weeks
+  final String treasurerMobileMoney;
+  final bool isShareBased;
+  final int totalShares;
+  final int sharesTaken;
+  final double contributionPerShare;
 
   Group({
     required this.id,
@@ -29,7 +34,12 @@ class Group {
     required this.goalAmount,
     required this.goalDescription,
     required this.contribution,
-    this.memberIds = const[],//empty memer list first
+    this.memberIds = const[],
+    required this.treasurerMobileMoney,
+    this.isShareBased = false,
+    this.totalShares = 0,
+    this.sharesTaken = 0,
+    this.contributionPerShare = 0.0,
     DateTime? createdAt,
 }) : createdAt = createdAt ?? DateTime.now(); //use now if not provided
 
@@ -46,8 +56,13 @@ class Group {
     required this.contributionFrequencyUnit,
     this.totalBalance = 0.0,
     this.memberIds = const [],
+    required this.treasurerMobileMoney,
+    this.isShareBased = false,
+    this.totalShares = 0,
+    this.sharesTaken = 0,
+    this.contributionPerShare = 0.0,
     DateTime? createdAt,
-  })  : id = '', // temporary placeholder
+  })  : id = '',
         createdAt = createdAt ?? DateTime.now();
 
   factory Group.fromMap(String docId, Map<String, dynamic> data) {
@@ -66,6 +81,11 @@ class Group {
         createdAt: (data['createdAt'] as Timestamp).toDate(),
         contributionFrequencyValue: data['contributionFrequencyValue'] ?? 1,
         contributionFrequencyUnit: data['contributionFrequencyUnit'] ?? 'months',
+        treasurerMobileMoney: data['treasurerMobileMoney'] ?? '',
+        isShareBased: data['isShareBased'] ?? false,
+        totalShares: data['totalShares'] ?? 0,
+        sharesTaken: data['sharesTaken'] ?? 0,
+        contributionPerShare: (data['contributionPerShare'] ?? 0.0).toDouble(),
     );
   }
   Map<String, dynamic> toMap() {
@@ -82,6 +102,11 @@ class Group {
       'memberIds': memberIds,
       'contributionFrequencyValue': contributionFrequencyValue,
       'contributionFrequencyUnit': contributionFrequencyUnit,
+      'treasurerMobileMoney': treasurerMobileMoney,
+      'isShareBased': isShareBased,
+      'totalShares': totalShares,
+      'sharesTaken': sharesTaken,
+      'contributionPerShare': contributionPerShare,
       'createdAt': Timestamp.fromDate(createdAt), //firestore time
     };
   }
@@ -104,6 +129,11 @@ class Group {
     DateTime? createdAt,
     int? contributionFrequencyValue,
     String? contributionFrequencyUnit,
+    String? treasurerMobileMoney,
+    bool? isShareBased,
+    int? totalShares,
+    int? sharesTaken,
+    double? contributionPerShare,
   }) {
     return Group(
       id: id ?? this.id,
@@ -120,6 +150,11 @@ class Group {
       contributionFrequencyValue: contributionFrequencyValue ?? this.contributionFrequencyValue,
       contributionFrequencyUnit: contributionFrequencyUnit ?? this.contributionFrequencyUnit,
       createdAt: createdAt ?? this.createdAt,
+      treasurerMobileMoney: treasurerMobileMoney ?? this.treasurerMobileMoney,
+      isShareBased: isShareBased ?? this.isShareBased,
+      totalShares: totalShares ?? this.totalShares,
+      sharesTaken: sharesTaken ?? this.sharesTaken,
+      contributionPerShare: contributionPerShare ?? this.contributionPerShare,
     );
   }
 }

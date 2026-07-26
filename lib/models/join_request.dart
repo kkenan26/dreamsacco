@@ -9,6 +9,7 @@ class JoinRequest {
   final String status;
   final String reason;
   final DateTime requestedAt;
+  final double sharesRequested; // 0 if not a share-based group
 
   JoinRequest({
     required this.id,
@@ -18,8 +19,10 @@ class JoinRequest {
     required this.riskFlag,
     this.status = 'pending',
     this.reason = '',
+    this.sharesRequested = 0.0,
     DateTime? requestedAt,
 }) : requestedAt = requestedAt ?? DateTime.now();
+
   factory JoinRequest.fromMap(String id, Map<String, dynamic> data) {
     return JoinRequest(
       id: id,
@@ -29,6 +32,7 @@ class JoinRequest {
       riskFlag: data['riskFlag'] ?? 'medium',
       status: data['status'] ?? 'pending',
       reason: data['reason'] ?? '',
+      sharesRequested: (data['sharesRequested'] ?? 0.0).toDouble(),
       requestedAt: (data['requestedAt'] as Timestamp).toDate(),
     );
   }
@@ -41,6 +45,7 @@ class JoinRequest {
       'status': status,
       'reason': reason,
       'requestedAt': Timestamp.fromDate(requestedAt),
+      'sharesRequested': sharesRequested,
     };
   }
 }

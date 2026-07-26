@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class Milestone {
   final int percent;
@@ -26,8 +29,9 @@ class _MilestoneScreenState extends State<MilestoneScreen>
   static const Color primaryColor = Color(0xFF0D47A1);
   static const Color secondaryColor = Color(0xFF1976D2);
 
-  final double targetGoal = 2000000;
-  double currentSavings = 1360000;
+  double targetGoal = 0;
+  double currentSavings = 0;
+  bool _isLoading = true;
 
   late AnimationController _progressController;
 
@@ -67,7 +71,44 @@ class _MilestoneScreenState extends State<MilestoneScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _progressController.forward();
+    _loadMilestoneData();
+  }
+
+  Future<void> _loadMilestoneData() async {
+    try {
+      String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      QuerySnapshot memberGroups = await FirebaseFirestore.instance
+          .collectionGroup('members')
+          .where('userId', isEqualTo: uid)
+          .limit(1)
+          .get();
+
+      if (memberGroups.docs.isEmpty) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      String groupId = memberGroups.docs.first.reference.parent.parent!.id;
+      DocumentSnapshot groupDoc = await FirebaseFirestore.instance.collection('groups').doc(groupId).get();
+
+      if (groupDoc.exists) {
+        Map<String, dynamic> data = groupDoc.data() as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            targetGoal = (data['goalAmount'] ?? 0).toDouble();
+            currentSavings = (data['totalBalance'] ?? 0).toDouble();
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+
+      _progressController.forward();
+    } catch (e) {
+      debugPrint('Milestone load error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -225,7 +266,9 @@ class _MilestoneScreenState extends State<MilestoneScreen>
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,24 +282,6 @@ class _MilestoneScreenState extends State<MilestoneScreen>
             const SizedBox(height: 12),
             ...milestones.map((m) => _buildMilestoneCard(m)),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: currentSavings >= targetGoal
-                    ? null
-                    : _simulateContribution,
-                icon: const Icon(Icons.add),
-                label: const Text("Simulate Contribution (+10%)"),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryColor,
-                  side: const BorderSide(color: primaryColor),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

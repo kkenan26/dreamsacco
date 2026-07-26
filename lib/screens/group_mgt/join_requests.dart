@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/join_request.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
   final result = await showDialog<bool>(
@@ -44,14 +44,18 @@ class JoinRequestsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
-          title: const Text('Requests'),
+          elevation: 0,
+          backgroundColor: const Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          title: const Text('Requests', style: TextStyle(fontWeight: FontWeight.w600)),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Join Requests'),
