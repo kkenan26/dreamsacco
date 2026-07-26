@@ -1,9 +1,14 @@
 // lib/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'transparency/transparency_screen.dart';
+import 'goals/goal_screen.dart';
+import 'whatif/what_if_calculator_screen.dart';
+import 'risk/risk_alert_screen.dart';
+import 'milestones/milestone_screen.dart';
+import 'shares/shares_screen.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_request_screen.dart';
 import 'loan_status_screen.dart';
-import 'group_mgt/group_list.dart';
 import 'group_mgt/profile.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -34,43 +39,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<Map<String, dynamic>> get services => [
-        {
-          "title": "Group Balance",
-          "subtitle": "UGX 12.5M",
-          "icon": Icons.account_balance_wallet,
-          "color": Colors.blue
-        },
-        {
-          "title": "Contributions",
-          "subtitle": contributionStatus,
-          "icon": Icons.payments,
-          "color": Colors.green
-        },
-        {
-          "title": "Savings Goals",
-          "subtitle": savingsGoal,
-          "icon": Icons.flag,
-          "color": Colors.orange
-        },
-        {
-          "title": "Calculator",
-          "subtitle": "Estimate Loan",
-          "icon": Icons.calculate,
-          "color": Colors.purple
-        },
-        {
-          "title": "Risk Alerts",
-          "subtitle": riskAlert,
-          "icon": Icons.warning_amber,
-          "color": Colors.red
-        },
-        {
-          "title": "Milestones",
-          "subtitle": milestones,
-          "icon": Icons.emoji_events,
-          "color": Colors.amber
-        },
-      ];
+    {
+      "title": "Group Balance",
+      "subtitle": "UGX 12.5M",
+      "icon": Icons.account_balance_wallet,
+      "color": Colors.blue,
+    },
+    {
+      "title": "Contributions",
+      "subtitle": contributionStatus,
+      "icon": Icons.payments,
+      "color": Colors.green,
+    },
+    {
+      "title": "Savings Goals",
+      "subtitle": savingsGoal,
+      "icon": Icons.flag,
+      "color": Colors.orange,
+    },
+    {
+      "title": "Calculator",
+      "subtitle": "Estimate Loan",
+      "icon": Icons.calculate,
+      "color": Colors.purple,
+    },
+    {
+      "title": "Risk Alerts",
+      "subtitle": riskAlert,
+      "icon": Icons.warning_amber,
+      "color": Colors.red,
+    },
+    {
+      "title": "Milestones",
+      "subtitle": milestones,
+      "icon": Icons.emoji_events,
+      "color": Colors.amber,
+    },
+  ];
 
   Widget _quick(IconData icon, String label) {
     return InkWell(
@@ -106,57 +111,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Route<T> _buildRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.04),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   void _handleQuickAction(String action) {
     if (action=="Loan"){
       Navigator.push(
         context,
         MaterialPageRoute(builder:(context) => const LoanRequestScreen()),
       );
-    } else if (action == "Shares") {
-      // TEMPORARY: Tamara testing Group Management screens, remove before final integration
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const GroupListScreen()),
-      );
-    } else if (action == "Profile") {
+      return;
+    }
+    if (action == "Profile") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
-    } else{
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$action tapped')),
-      );
+      return;
     }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$action tapped')));
   }
 
   void _handleServiceTap(String title) {
-    if (title== "Credit Score"|| title== "Savings Goals"){
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context)=> const CreditScoreScreen()),
-      );
+    switch (title) {
+      case "Group Balance":
+      case "Contributions":
+        Navigator.push(context, _buildRoute(const TransparencyScreen()));
+        break;
+      case "Savings Goals":
+        Navigator.push(context, _buildRoute(const GoalScreen()));
+        break;
+      case "Calculator":
+        Navigator.push(context, _buildRoute(const WhatIfCalculatorScreen()));
+        break;
+      case "Risk Alerts":
+        Navigator.push(context, _buildRoute(const RiskAlertScreen()));
+        break;
+      case "Milestones":
+        Navigator.push(context, _buildRoute(const MilestoneScreen()));
+        break;
+      case "Credit Score":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreditScoreScreen()),
+        );
+        break;
+      case "Loan Status":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
+        );
+        break;
+      default:
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$title tapped')));
     }
-    else if (title== "Risk Alerts"){
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
-      );
-    }
-
-    else if(title=="Calculator") {
-      //This is opening the loan request and schedule screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoanRequestScreen()),
-      );
-    }
-    else{
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title tapped')),
-      );
-    }
-}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,26 +200,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
-        title: const Text("DreamSacco Dashboard", style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text(
+          "DreamSacco Dashboard",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         actions: [
           IconButton(
-            onPressed: () {}, 
+            onPressed: () {},
             icon: const Icon(Icons.notifications_outlined),
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-            child: const Padding(
-              padding: EdgeInsets.only(right: 16.0, left: 8.0),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white24,
-                child: Icon(Icons.person, size: 18, color: Colors.white),
-              ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0, left: 8.0),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.white24,
+              child: Icon(Icons.person, size: 18, color: Colors.white),
             ),
           ),
         ],
@@ -193,19 +222,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, 
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               getGreeting(),
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
-              userName, 
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+              userName,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 16),
-            
+
             // Balance Card Section
             Container(
               decoration: BoxDecoration(
@@ -220,40 +257,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: const Color(0xFF0D47A1).withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
-                ]
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("Account Summary", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Text(
+                            "Account Summary",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text("ID: $memberId", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          Text(
+                            "ID: $memberId",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                       IconButton(
                         color: Colors.white,
-                        onPressed: () => setState(() => hideBalance = !hideBalance),
-                        icon: Icon(hideBalance ? Icons.visibility_off : Icons.visibility),
-                      )
+                        onPressed: () =>
+                            setState(() => hideBalance = !hideBalance),
+                        icon: Icon(
+                          hideBalance ? Icons.visibility_off : Icons.visibility,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround, 
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       Expanded(
                         child: Column(
                           children: [
-                            const Text("Savings", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Text(
+                              "Savings",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(hideBalance ? "******" : savingsAmount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))
+                            Text(
+                              hideBalance ? "******" : savingsAmount,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -261,9 +327,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            const Text("Loan Balance", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Text(
+                              "Loan Balance",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(hideBalance ? "******" : loanAmount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))
+                            Text(
+                              hideBalance ? "******" : loanAmount,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
                       )
