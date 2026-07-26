@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
-import 'home_screen.dart';
+import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,7 +42,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (uid != null) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(
+            builder: (context) => const DashboardScreen()),
             (route) => false,
       );
     } else {
@@ -71,18 +72,14 @@ class _LoginScreenState extends State<LoginScreen> {
             const Text(
               'Welcome back ^-^',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0D47A1),
-              ),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0D47A1)),
             ),
             const SizedBox(height: 8),
             const Text(
               'Log in to continue to DreamSACCO',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF42A5F5),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF42A5F5)),
             ),
             const SizedBox(height: 32),
             TextField(
@@ -90,13 +87,14 @@ class _LoginScreenState extends State<LoginScreen> {
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email Address',
-                prefixIcon: const Icon(Icons.email, color: Color(0xFF0D47A1)),
+                prefixIcon:
+                const Icon(Icons.email, color: Color(0xFF0D47A1)),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFF0D47A1), width: 2),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF0D47A1), width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -108,20 +106,24 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock, color: Color(0xFF0D47A1)),
+                prefixIcon:
+                const Icon(Icons.lock, color: Color(0xFF0D47A1)),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                    _obscurePassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                     color: const Color(0xFF0D47A1),
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword),
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFF0D47A1), width: 2),
+                  borderSide: const BorderSide(
+                      color: Color(0xFF0D47A1), width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -129,7 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 32),
             _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D47A1)))
+                ? const Center(
+                child: CircularProgressIndicator(
+                    color: Color(0xFF0D47A1)))
                 : ElevatedButton(
               onPressed: _login,
               style: ElevatedButton.styleFrom(
@@ -137,30 +141,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 backgroundColor: const Color(0xFF0D47A1),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 elevation: 4,
               ),
-              child: const Text(
-                'Log In',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+              child: const Text('Log In',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
             ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Don\'t have an account? ',
+                const Text("Don't have an account? ",
                     style: TextStyle(color: Colors.grey)),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(
-                      color: Color(0xFF0D47A1),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: const Text('Sign Up',
+                      style: TextStyle(
+                          color: Color(0xFF0D47A1),
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
