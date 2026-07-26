@@ -4,6 +4,7 @@ import 'credit_scoring_screen.dart';
 import 'loan_request_screen.dart';
 import 'loan_status_screen.dart';
 import 'group_mgt/group_list.dart';
+import 'group_mgt/profile.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -117,6 +118,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context,
         MaterialPageRoute(builder: (context) => const GroupListScreen()),
       );
+    } else if (action == "Profile") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
     } else{
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$action tapped')),
@@ -166,14 +172,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: () {}, 
             icon: const Icon(Icons.notifications_outlined),
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0, left: 8.0),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.person, size: 18, color: Colors.white),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.only(right: 16.0, left: 8.0),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.white24,
+                child: Icon(Icons.person, size: 18, color: Colors.white),
+              ),
             ),
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
