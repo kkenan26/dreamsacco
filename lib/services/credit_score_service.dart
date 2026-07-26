@@ -1,45 +1,83 @@
-//import 'dart:math';
-//this is a mock credit score service for testing my models
-//, please replace with th actual one  when you have one
-//abstract class CreditScoreService {
-  //Future<double> getCreditScore(String userId);
-//}
-//class MockCreditScoreService implements CreditScoreService {
-  //final Random _random = Random();
-  //@override
-  //Future<double> getCreditScore(String userId) async {
-    //await Future.delayed(const Duration(seconds: 1)); //simulate delay when calculating
-    //return 10 + _random.nextDouble() * 90;
-  //}
-//}
-
-//lib/services/credit_score_service.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/credit_score_model.dart';
 
-class CreditScoreService{
-  final String baseUrl ="http://10.0.2.2.8000";
-  Future<CreditScoreModel> fetchUserCreditScore(String memberId) async{
-    try{
-      final response= await http.get(
-        Uri.parse('$baseUrl/credit-score/$memberId'),
-        headers: {"Content-Type": "application/json"},
+class CreditScoreService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<CreditScoreModel> fetchUserCreditScore(String groupId) async {
+    try {
+      String uid = _auth.currentUser?.uid ?? '';
+
+      // Fetch contributions for this user in this group
+      QuerySnapshot contributions = await _db
+          .collection('groups')
+          .doc(groupId)
+          .collection('contributions')
+          .where('userId', isEqualTo: uid)
+          .get();
+
+      int totalContributions = 0;
+      int missedContributions = 0;
+
+      for (var doc in contributions.docs) {
+        String status = doc['status'] ?? 'missed';
+        if (status == 'paid') {
+          totalContributions++;
+        } else {
+          missedContributions++;
+        }
+      }
+
+      // Fetch loans for this user
+      QuerySnapshot loans = await _db
+          .collection('groups')
+          .doc(groupId)
+          .collection('loans')
+          .where('requesterId', isEqualTo: uid)
+          .get();
+
+      int loansRepaid = 0;
+      int activeLoanCount = 0;
+
+      for (var doc in loans.docs) {
+        String status = doc['status'] ?? '';
+        if (status == 'cleared') loansRepaid++;
+        if (status == 'repaying') activeLoanCount++;
+      }
+
+      // Fetch streak from user profile
+      DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
+      int streak = 0;
+      if (userDoc.exists) {
+        streak = (userDoc['contributionStreak'] as num?)?.toInt() ?? 0;
+      }
+
+      // Compute and return credit score
+      CreditScoreModel score = CreditScoreModel.compute(
+        totalContributions: totalContributions,
+        missedContributions: missedContributions,
+        loansRepaid: loansRepaid,
+        activeLoanCount: activeLoanCount,
+        contributionStreak: streak,
       );
-      if (response.statusCode == 200){
-        final Map<String, dynamic>data = json.decode(response.body);
-        return CreditScoreModel.fromJson(data);
-      }
-      else {
-        throw Exception('Failed to load credit score from database');
-      }
-    }
-    catch(e){
-      print ("Error fetching credit score: $e");
+
+      // Save updated credit score back to user profile
+      await _db.collection('users').doc(uid).update({
+        'creditScore': score.score,
+        'loanLimit': score.loanLimit,
+      });
+
+      return score;
+    } catch (e) {
+      print('Credit score error: $e');
       return CreditScoreModel(
-        score: 720,
-        rating: "Good(Offline)",
-        remark: "Could not reach database. Showing cached data.",
+        score: 50,
+        rating: "Unrated",
+        remark: "Not enough activity to compute score yet.",
+        loanLimit: 0,
+        interestRate: 0.15,
       );
     }
   }
