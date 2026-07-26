@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_request_screen.dart';
 import 'loan_status_screen.dart';
+import 'group_mgt/group_list.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -110,9 +111,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context,
         MaterialPageRoute(builder:(context) => const LoanRequestScreen()),
       );
-    }else{
+    } else if (action == "Shares") {
+      // TEMPORARY: Tamara testing Group Management screens, remove before final integration
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const GroupListScreen()),
+      );
+    } else{
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$action tapped')),
+        SnackBar(content: Text('$action tapped')),
       );
     }
   }

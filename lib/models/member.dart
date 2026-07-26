@@ -6,12 +6,14 @@ class Member{
   final String status;
   final String riskFlag;
   final DateTime joinedAt;
+  final double shares;
 
   Member({
     required this.userId,
     required this.role,
     this.status = 'active',
     this.riskFlag = 'low',
+    this.shares = 0.0,
     DateTime? joinedAt,
 }) :joinedAt = joinedAt ?? DateTime.now();
 
@@ -21,6 +23,7 @@ class Member{
       role: data['role'] ?? 'member',
       status: data['status'] ?? 'active',
       riskFlag: data['riskFlag'] ?? 'low',
+      shares: (data['shares'] ?? 0.0).toDouble(),
       joinedAt: (data['joinedAt'] as Timestamp).toDate(),
     );
 }
@@ -29,6 +32,7 @@ class Member{
       'role': role,
       'status': status,
       'riskFlag': riskFlag,
+      'shares': shares,
       'joinedAt': Timestamp.fromDate(joinedAt),
     };
     }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import '../../services/group.dart';
 import '../../services/credit_score.dart';
 import '../../models/group.dart';
 import '../../models/member.dart';
 import 'join_requests.dart';
 import 'member_mgt.dart';
-import 'package:flutter/services.dart';
 
 class GroupDetailScreen extends StatelessWidget {
   final Group group;
@@ -49,29 +49,35 @@ class GroupDetailScreen extends StatelessWidget {
               );
             },
           ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () async {
-                final groupService = GroupService(creditScoreService: MockCreditScoreService());
-                String userId = FirebaseAuth.instance.currentUser!.uid;
-                String userName = await groupService.getUserName(userId);
-                await groupService.requestToLeaveGroup(
-                  groupId: group.id,
-                  userId: userId,
-                  userName: userName,
+          TextButton.icon(
+            onPressed: () async {
+              String userId = FirebaseAuth.instance.currentUser!.uid;
+
+              if (userId == group.adminId) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Reassign the admin role before leaving.'),
+                  ),
                 );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Leave request sent to admin.')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.logout, size: 18, color: Colors.white),
-              label: const Text(
-                'Leave',
-                style: TextStyle(fontSize: 14, color: Colors.white),
-              ),
+                return;
+              }
+
+              String userName = await groupService.getUserName(userId);
+              await groupService.requestToLeaveGroup(
+                groupId: group.id,
+                userId: userId,
+                userName: userName,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Leave request sent to admin.')),
+                );
+              }
+            },
+            icon: const Icon(Icons.logout, size: 18, color: Colors.white),
+            label: const Text(
+              'Leave',
+              style: TextStyle(fontSize: 14, color: Colors.white),
             ),
           ),
         ],
@@ -141,9 +147,19 @@ class GroupDetailScreen extends StatelessWidget {
                     itemCount: members.length,
                     itemBuilder: (context, index) {
                       final member = members[index];
-                      return ListTile(
-                        title: Text(member.userId),
-                        subtitle: Text('Role: ${member.role}'),
+                      return FutureBuilder<String>(
+                        future: groupService.getUserName(member.userId),
+                        builder: (context, nameSnapshot) {
+                          final displayName = nameSnapshot.data ?? member.userId;
+                          return ListTile(
+                            title: Text(displayName),
+                            subtitle: Text(
+                              member.shares > 0
+                                  ? 'Role: ${member.role} · Shares: ${member.shares.toStringAsFixed(1)}'
+                                  : 'Role: ${member.role}',
+                            ),
+                          );
+                        },
                       );
                     },
                   );

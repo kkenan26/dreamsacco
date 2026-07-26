@@ -15,12 +15,41 @@ class PublicGroupPreviewScreen extends StatefulWidget {
 
 class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
   bool _isSubmitting = false;
+  final _sharesController = TextEditingController();
+
 
   final GroupService _groupService = GroupService(
     creditScoreService: MockCreditScoreService(),
   );
 
+  @override
+  void dispose() {
+    _sharesController.dispose();
+    super.dispose();
+  }
+
   Future<void> _requestToJoin() async {
+    double sharesRequested = 0.0;
+
+    if (widget.group.isShareBased) {
+      if (_sharesController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a share percentage to request.')),
+        );
+        return;
+      }
+      double percent = double.tryParse(_sharesController.text.trim()) ?? 0;
+      sharesRequested = (percent / 100) * widget.group.totalShares;
+
+      int remainingShares = widget.group.totalShares - widget.group.sharesTaken;
+      if (sharesRequested > remainingShares) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Only $remainingShares shares remaining.')),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSubmitting = true);
     try {
       String userId = FirebaseAuth.instance.currentUser!.uid;
@@ -30,6 +59,7 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
         groupId: widget.group.id,
         userId: userId,
         userName: userName,
+        sharesRequested: sharesRequested,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +103,18 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
             Text(
               'Contribution Amount: UGX ${group.contribution.toStringAsFixed(0)} every ${group.contributionFrequencyValue} ${group.contributionFrequencyUnit}',
             ),
+            if (group.isShareBased) ...[
+              Text(
+                'Shares available: ${group.totalShares - group.sharesTaken} / ${group.totalShares}',
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _sharesController,
+                decoration: const InputDecoration(labelText: 'Percentage of shares to request (%)'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+            ],
             const SizedBox(height: 24),
             _isSubmitting
                 ? const Center(child: CircularProgressIndicator())

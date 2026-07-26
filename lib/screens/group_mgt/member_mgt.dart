@@ -57,49 +57,60 @@ class MemberManagementScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final member = members[index];
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  title: Text(member.userId),
-                  subtitle: Text('Status: ${member.status}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButton<String>(
-                        value: member.role,
-                        items: const [
-                          DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                          DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
-                          DropdownMenuItem(value: 'member', child: Text('Member')),
+              return FutureBuilder<String>(
+                future: groupService.getUserName(member.userId),
+                builder: (context, nameSnapshot) {
+                  final displayName = nameSnapshot.data ?? member.userId;
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(
+                      title: Text(displayName),
+                      subtitle: Text(
+                        member.shares > 0
+                            ? 'Status: ${member.status} · Shares: ${member.shares.toStringAsFixed(1)}'
+                            : 'Status: ${member.status}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DropdownButton<String>(
+                            value: member.role,
+                            items: const [
+                              DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                              DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
+                              DropdownMenuItem(value: 'member', child: Text('Member')),
+                            ],
+                            onChanged: (newRole) async {
+                              if (newRole == null) return;
+                              await groupService.updateMemberRole(
+                                groupId: groupId,
+                                userId: member.userId,
+                                newRole: newRole,
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              bool confirmed = await _confirmAction(
+                                context,
+                                'Remove Member?',
+                                'This will remove $displayName from the group.',
+                              );
+                              if (confirmed) {
+                                await groupService.removeMember(
+                                  groupId: groupId,
+                                  userId: member.userId,
+                                );
+                              }
+                            },
+                          ),
                         ],
-                        onChanged: (newRole) async {
-                          if (newRole == null) return;
-                          await groupService.updateMemberRole(
-                            groupId: groupId,
-                            userId: member.userId,
-                            newRole: newRole,
-                          );
-                        },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          bool confirmed = await _confirmAction(
-                            context,
-                            'Remove Member?',
-                            'This will remove ${member.userId} from the group.',
-                          );
-                          if (confirmed) {
-                            await groupService.removeMember(
-                              groupId: groupId,
-                              userId: member.userId,
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );

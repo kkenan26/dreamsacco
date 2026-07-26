@@ -34,16 +34,32 @@ class GroupService {
 
   Future<String> createGroup(Group group) async {
     DocumentReference groupDocRef = _firestore.collection('groups').doc();
+
+    List<String> initialMembers = [group.adminId];
+    if (group.treasurerId.isNotEmpty && group.treasurerId != group.adminId) {
+      initialMembers.add(group.treasurerId);
+    }
+
     Group newGroup = group.copyWith(
       id: groupDocRef.id,
-      memberIds: [group.adminId],
+      memberIds: initialMembers,
     );
     await groupDocRef.set(newGroup.toMap());
+
     await _addMemberToGroup(
       groupId: newGroup.id,
       userId: newGroup.adminId,
       role: 'admin',
     );
+
+    if (group.treasurerId.isNotEmpty && group.treasurerId != group.adminId) {
+      await _addMemberToGroup(
+        groupId: newGroup.id,
+        userId: newGroup.treasurerId,
+        role: 'treasurer',
+      );
+    }
+
     return newGroup.id;
   }
 
@@ -82,6 +98,7 @@ class GroupService {
     required String groupId,
     required String userId,
     required String userName,
+    double sharesRequested = 0.0,
   }) async {
     double score = await _creditScoreService.getCreditScore(userId);
     String risk = _computeRiskFlag(score);
@@ -99,6 +116,7 @@ class GroupService {
       userName: userName,
       userCreditScore: score,
       riskFlag: risk,
+      sharesRequested: sharesRequested,
     );
 
     await requestDocRef.set(newRequest.toMap());
@@ -121,6 +139,19 @@ class GroupService {
     required String requestId,
     required String userId,
   }) async {
+    DocumentSnapshot requestDoc = await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('joinRequests')
+        .doc(requestId)
+        .get();
+
+    double sharesRequested = 0.0;
+    if (requestDoc.exists) {
+      Map<String, dynamic> data = requestDoc.data() as Map<String, dynamic>;
+      sharesRequested = (data['sharesRequested'] ?? 0.0).toDouble();
+    }
+
     await _firestore
         .collection('groups')
         .doc(groupId)
@@ -128,19 +159,32 @@ class GroupService {
         .doc(requestId)
         .update({'status': 'approved'});
 
-    //add the user to the members
     await _addMemberToGroup(
       groupId: groupId,
       userId: userId,
       role: 'member',
     );
 
-    // 3. Add the userId to the group's memberIds array
+    if (sharesRequested > 0) {
+      await _firestore
+          .collection('groups')
+          .doc(groupId)
+          .collection('members')
+          .doc(userId)
+          .update({'shares': sharesRequested});
+
+      await _firestore.collection('groups').doc(groupId).update({
+        'sharesTaken': FieldValue.increment(sharesRequested.round()),
+      });
+    }
+
     await _firestore.collection('groups').doc(groupId).update({
       'memberIds': FieldValue.arrayUnion([userId]),
     });
+
     DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
     String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
+
     await _sendNotification(
       targetUserId: userId,
       message: 'Your request to join $groupName was approved!',
@@ -368,6 +412,7 @@ class GroupService {
         .snapshots()
         .map((snapshot) => snapshot.docs
         .map((doc) => Group.fromMap(doc.id, doc.data()))
+        .where((group) => !(group.isShareBased && group.sharesTaken >= group.totalShares))
         .toList());
   }
   Future<String> getUserName(String userId) async {
@@ -375,7 +420,6 @@ class GroupService {
     if (userDoc.exists) {
       Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
       return data['fullName'] ?? data['name'] ?? 'Unknown User';
-      // ^ checks both possible field names so it works either way
     }
     return 'Unknown User';
   }
