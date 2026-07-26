@@ -433,7 +433,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_balance),
-            label: 'Accounts',
+            label: 'Groups',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.more_horiz),
