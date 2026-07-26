@@ -8,6 +8,7 @@ import 'group_detail.dart';
 import 'browse_groups.dart';
 import 'join_by_id.dart';
 import 'notifications.dart';
+import 'profile.dart';
 
 class GroupListScreen extends StatelessWidget {
   const GroupListScreen({super.key});
@@ -48,6 +49,15 @@ class GroupListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
               );
             },
           ),

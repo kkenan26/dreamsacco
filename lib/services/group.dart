@@ -423,4 +423,14 @@ class GroupService {
     }
     return 'Unknown User';
   }
+  Future<Map<String, dynamic>> getUserProfile(String userId) async {
+    DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      return userDoc.data() as Map<String, dynamic>;
+    }
+    return {};
+  }
+  Future<double> getCreditScoreForDisplay(String userId) async {
+    return await _creditScoreService.getCreditScore(userId);
+  }
 }

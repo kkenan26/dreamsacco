@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/member.dart';
 import '../../services/credit_score.dart';
+import 'profile.dart';
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
   final result = await showDialog<bool>(
@@ -71,6 +72,14 @@ class MemberManagementScreen extends StatelessWidget {
                             ? 'Status: ${member.status} · Shares: ${member.shares.toStringAsFixed(1)}'
                             : 'Status: ${member.status}',
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileScreen(userId: member.userId),
+                          ),
+                        );
+                      },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
