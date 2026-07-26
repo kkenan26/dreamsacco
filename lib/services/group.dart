@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dreamsacco/models/credit_score_model.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
 import '../models/group.dart';
 import '../models/join_request.dart';
 import '../models/member.dart';
-import 'credit_score.dart';
+import 'credit_score_service.dart';
 
 class GroupService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CreditScoreService _creditScoreService;
 
-  GroupService({required CreditScoreService creditScoreService})
+  GroupService({required CreditScoreService creditScoreService})//CreditScoreService creditScoreService})
     : _creditScoreService = creditScoreService;
 
   Future<void> _addMemberToGroup({
@@ -100,7 +101,8 @@ class GroupService {
     required String userName,
     double sharesRequested = 0.0,
   }) async {
-    double score = await _creditScoreService.getCreditScore(userId);
+    CreditScoreModel creditModel= await _creditScoreService.fetchUserCreditScore(userId);
+    double score = creditModel.score.toDouble();
     String risk = _computeRiskFlag(score);
 
     CollectionReference requestsRef = _firestore
