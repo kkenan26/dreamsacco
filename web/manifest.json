@@ -1,6 +1,6 @@
 {
-    "name": "sacco_app",
-    "short_name": "sacco_app",
+    "name": "dreamsacco",
+    "short_name": "dreamsacco",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
