@@ -1,4 +1,4 @@
-// lib/dashboard_screen.dart
+// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 
 import 'transparency/transparency_screen.dart';
@@ -7,6 +7,9 @@ import 'whatif/what_if_calculator_screen.dart';
 import 'risk/risk_alert_screen.dart';
 import 'milestones/milestone_screen.dart';
 import 'shares/shares_screen.dart';
+import 'credit_scoring_screen.dart';
+import 'loan_request_screen.dart';
+import 'loan_status_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -142,6 +145,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Navigator.push(context, _buildRoute(const SharesScreen()));
       return;
     }
+    if (action == "Loan") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoanRequestScreen()),
+      );
+      return;
+    }
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('$action tapped')));
@@ -164,6 +174,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         break;
       case "Milestones":
         Navigator.push(context, _buildRoute(const MilestoneScreen()));
+        break;
+      case "Credit Score":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreditScoreScreen()),
+        );
+        break;
+      case "Loan Status":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
+        );
         break;
       default:
         ScaffoldMessenger.of(
@@ -352,7 +374,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Quick Actions Section (Merged Layout)
+            // Quick Actions Section
             const Text(
               "Quick Actions",
               style: TextStyle(
