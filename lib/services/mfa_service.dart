@@ -30,7 +30,7 @@ class MFAService {
 }) async {
     await _db.collection('mfaLogs').add({
       'userId': userId,
-      'action': action,
+      'action': action.name,
       'verified': verified,
       'triggeredAt': FieldValue.serverTimestamp(),
     });

@@ -1,4 +1,3 @@
-// lib/screens/credit_scoring_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,42 +12,38 @@ class CreditScoreScreen extends StatefulWidget {
 }
 
 class _CreditScoreScreenState extends State<CreditScoreScreen> {
-  final CreditScoreService _creditScoreService = CreditScoreService();
-  Future<CreditScoreModel>? _creditScoreFuture;
-  String? _groupId;
+  final CreditScoreService _service = CreditScoreService();
+  CreditScoreModel? _credit;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadGroupAndScore();
+    _load();
   }
 
-  void _loadGroupAndScore() async {
+  void _load() async {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    // Find the first group this user belongs to
-    QuerySnapshot memberGroups = await FirebaseFirestore.instance
-        .collectionGroup('members')
-        .where(FieldPath.documentId, isEqualTo: uid)
+
+    QuerySnapshot groups = await FirebaseFirestore.instance
+        .collection('groups')
+        .where('memberIds', arrayContains: uid)
         .limit(1)
         .get();
 
-    if (memberGroups.docs.isNotEmpty) {
-      String groupId = memberGroups.docs.first.reference.parent.parent!.id;
-      setState(() {
-        _groupId = groupId;
-        _creditScoreFuture = _creditScoreService.fetchUserCreditScore(groupId);
-      });
-    } else {
-      setState(() {
-        _creditScoreFuture = Future.value(CreditScoreModel(
-          score: 50,
-          rating: "Unrated",
-          remark: "Join a group to start building your credit score.",
-          loanLimit: 0,
-          interestRate: 0.15,
-        ));
-      });
+    String groupId = '';
+    if (groups.docs.isNotEmpty) {
+      groupId = groups.docs.first.id;
     }
+
+    CreditScoreModel score =
+    await _service.fetchUserCreditScore(groupId.isEmpty ? 'none' : groupId);
+
+    if (!mounted) return;
+    setState(() {
+      _credit = score;
+      _loading = false;
+    });
   }
 
   Color _scoreColor(int score) {
@@ -67,162 +62,155 @@ class _CreditScoreScreenState extends State<CreditScoreScreen> {
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
       ),
-      body: _creditScoreFuture == null
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : FutureBuilder<CreditScoreModel>(
-        future: _creditScoreFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (snapshot.hasData) {
-            final credit = snapshot.data!;
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+          : _credit == null
+          ? const Center(child: Text("No credit data available"))
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF0D47A1),
+                    Color(0xFF1976D2)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Score card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          "Your Credit Score",
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "${credit.score}/100",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Chip(
-                          label: Text(
-                            credit.rating,
-                            style: TextStyle(
-                              color: _scoreColor(credit.score),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          backgroundColor: Colors.white,
-                        ),
-                      ],
-                    ),
+                  const Text("Your Credit Score",
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16)),
+                  const SizedBox(height: 8),
+                  Text("${_credit!.score}/100",
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Chip(
+                    label: Text(_credit!.rating,
+                        style: TextStyle(
+                            color: _scoreColor(
+                                _credit!.score),
+                            fontWeight:
+                            FontWeight.bold)),
+                    backgroundColor: Colors.white,
                   ),
-                  const SizedBox(height: 24),
-
-                  // Loan eligibility card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 4)
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Loan Eligibility",
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4)
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  const Text("Loan Eligibility",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Maximum Loan:",
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Maximum Loan:",
-                                style: TextStyle(color: Colors.grey)),
-                            Text(
-                              "UGX ${credit.loanLimit.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}",
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0D47A1)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Interest Rate:",
-                                style: TextStyle(color: Colors.grey)),
-                            Text(
-                              "${(credit.interestRate * 100).toStringAsFixed(0)}%",
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                              color: Colors.grey)),
+                      Text(
+                          "UGX ${_credit!.loanLimit.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0D47A1))),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Remark card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 4)
-                      ],
-                    ),
-                    child: Row(
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Interest Rate:",
+                          style: TextStyle(
+                              color: Colors.grey)),
+                      Text(
+                          "${(_credit!.interestRate * 100).toStringAsFixed(0)}%",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4)
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _scoreColor(
+                        _credit!.score)
+                        .withValues(alpha: 0.12),
+                    child: Icon(Icons.info_outline,
+                        color:
+                        _scoreColor(_credit!.score)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          backgroundColor:
-                          _scoreColor(credit.score).withValues(alpha: 0.12),
-                          child: Icon(Icons.info_outline,
-                              color: _scoreColor(credit.score)),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text("Score Analysis",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14)),
-                              const SizedBox(height: 4),
-                              Text(credit.remark,
-                                  style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 12)),
-                            ],
-                          ),
-                        ),
+                        const Text("Score Analysis",
+                            style: TextStyle(
+                                fontWeight:
+                                FontWeight.bold,
+                                fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Text(_credit!.remark,
+                            style: TextStyle(
+                                color:
+                                Colors.grey.shade600,
+                                fontSize: 12)),
                       ],
                     ),
                   ),
                 ],
               ),
-            );
-          }
-          return const Center(child: Text("No credit data available"));
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
