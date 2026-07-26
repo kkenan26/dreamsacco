@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 import '../../models/group.dart';
 
 class CreateGroupScreen extends StatefulWidget {
@@ -31,7 +31,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   bool _isSubmitting = false;
 
   final GroupService _groupService = GroupService(
-    creditScoreService: CreditScoreService(),
+    creditScoreService: RealCreditScoreAdapter(),
   );
 
   String get _currentUserId => FirebaseAuth.instance.currentUser!.uid;

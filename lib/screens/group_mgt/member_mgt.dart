@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/member.dart';
 import 'profile.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
@@ -33,7 +33,7 @@ class MemberManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     return Scaffold(

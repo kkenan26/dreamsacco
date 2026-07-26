@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 
 class JoinByIdScreen extends StatefulWidget {
   const JoinByIdScreen({super.key});
@@ -17,7 +17,7 @@ class _JoinByIdScreenState extends State<JoinByIdScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   final GroupService _groupService = GroupService(
-    creditScoreService: CreditScoreService(),
+    creditScoreService: RealCreditScoreAdapter(),
   );
 
   @override

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import '../../services/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 import '../../models/group.dart';
 import '../../models/member.dart';
 import 'join_requests.dart';
@@ -16,7 +16,7 @@ class GroupDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     final progress = group.goalAmount > 0

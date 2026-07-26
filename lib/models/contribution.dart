@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Represents a single contribution record.
-/// Maps directly to a document in the top-level `contributions` collection.
 class Contribution {
   final String id;
   final String userId;

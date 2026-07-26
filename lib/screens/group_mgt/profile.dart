@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
-import '../../services/credit_score.dart';
+import '../../services/adapter.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String? userId; // null means "view my own profile"
@@ -11,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: MockCreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
     final String viewedUserId = userId ?? FirebaseAuth.instance.currentUser!.uid;
     return Scaffold(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
 import '../../models/group.dart';
-import '../../services/credit_score_service.dart';
+import '../../services/adapter.dart';
 import 'public_group_preview.dart';
 
 class BrowseGroupsScreen extends StatelessWidget {
@@ -10,7 +10,7 @@ class BrowseGroupsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: CreditScoreService(),
+      creditScoreService: RealCreditScoreAdapter(),
     );
 
     return Scaffold(
