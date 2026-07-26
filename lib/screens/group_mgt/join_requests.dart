@@ -50,13 +50,16 @@ class JoinRequestsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: const Color(0xFF0D47A1),
           foregroundColor: Colors.white,
           title: const Text('Requests', style: TextStyle(fontWeight: FontWeight.w600)),
           bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            labelStyle: TextStyle(fontWeight: FontWeight.w600),
             tabs: [
               Tab(text: 'Join Requests'),
               Tab(text: 'Leave Requests'),
