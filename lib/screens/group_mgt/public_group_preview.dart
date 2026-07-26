@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../models/group.dart';
-import '../../services/credit_score.dart';
+import '../../services/credit_score_service.dart';
 
 class PublicGroupPreviewScreen extends StatefulWidget {
   final Group group;
@@ -19,7 +19,7 @@ class _PublicGroupPreviewScreenState extends State<PublicGroupPreviewScreen> {
 
 
   final GroupService _groupService = GroupService(
-    creditScoreService: MockCreditScoreService(),
+    creditScoreService: CreditScoreService(),
   );
 
   @override
