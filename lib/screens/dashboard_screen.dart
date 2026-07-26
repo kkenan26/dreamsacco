@@ -1,5 +1,12 @@
-// lib/dashboard_screen.dart
+// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+
+import 'transparency/transparency_screen.dart';
+import 'goals/goal_screen.dart';
+import 'whatif/what_if_calculator_screen.dart';
+import 'risk/risk_alert_screen.dart';
+import 'milestones/milestone_screen.dart';
+import 'shares/shares_screen.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_request_screen.dart';
 import 'loan_status_screen.dart';
@@ -32,43 +39,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<Map<String, dynamic>> get services => [
-        {
-          "title": "Group Balance",
-          "subtitle": "UGX 12.5M",
-          "icon": Icons.account_balance_wallet,
-          "color": Colors.blue
-        },
-        {
-          "title": "Contributions",
-          "subtitle": contributionStatus,
-          "icon": Icons.payments,
-          "color": Colors.green
-        },
-        {
-          "title": "Savings Goals",
-          "subtitle": savingsGoal,
-          "icon": Icons.flag,
-          "color": Colors.orange
-        },
-        {
-          "title": "Calculator",
-          "subtitle": "Estimate Loan",
-          "icon": Icons.calculate,
-          "color": Colors.purple
-        },
-        {
-          "title": "Risk Alerts",
-          "subtitle": riskAlert,
-          "icon": Icons.warning_amber,
-          "color": Colors.red
-        },
-        {
-          "title": "Milestones",
-          "subtitle": milestones,
-          "icon": Icons.emoji_events,
-          "color": Colors.amber
-        },
-      ];
+    {
+      "title": "Group Balance",
+      "subtitle": "UGX 12.5M",
+      "icon": Icons.account_balance_wallet,
+      "color": Colors.blue,
+    },
+    {
+      "title": "Contributions",
+      "subtitle": contributionStatus,
+      "icon": Icons.payments,
+      "color": Colors.green,
+    },
+    {
+      "title": "Savings Goals",
+      "subtitle": savingsGoal,
+      "icon": Icons.flag,
+      "color": Colors.orange,
+    },
+    {
+      "title": "Calculator",
+      "subtitle": "Estimate Loan",
+      "icon": Icons.calculate,
+      "color": Colors.purple,
+    },
+    {
+      "title": "Risk Alerts",
+      "subtitle": riskAlert,
+      "icon": Icons.warning_amber,
+      "color": Colors.red,
+    },
+    {
+      "title": "Milestones",
+      "subtitle": milestones,
+      "icon": Icons.emoji_events,
+      "color": Colors.amber,
+    },
+  ];
 
   Widget _quick(IconData icon, String label) {
     return InkWell(
@@ -96,7 +103,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ],
         ),
@@ -104,46 +115,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _handleQuickAction(String action) {
-    if (action=="Loan"){
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder:(context) => const LoanRequestScreen()),
-      );
-    }else{
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$action tapped')),
-      );
-    }
+  // Smooth fade + slide transition used for navigating to Member 5 screens.
+  Route<T> _buildRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.04),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 
-  void _handleServiceTap(String title) {
-    if (title== "Credit Score"|| title== "Savings Goals"){
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context)=> const CreditScoreScreen()),
-      );
+  void _handleQuickAction(String action) {
+    if (action == "Shares") {
+      Navigator.push(context, _buildRoute(const SharesScreen()));
+      return;
     }
-    else if (title== "Risk Alerts"){
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
-      );
-    }
-
-    else if(title=="Calculator") {
-      //This is opening the loan request and schedule screen
+    if (action == "Loan") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoanRequestScreen()),
       );
+      return;
     }
-    else{
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title tapped')),
-      );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$action tapped')));
+  }
+
+  void _handleServiceTap(String title) {
+    switch (title) {
+      case "Group Balance":
+      case "Contributions":
+        Navigator.push(context, _buildRoute(const TransparencyScreen()));
+        break;
+      case "Savings Goals":
+        Navigator.push(context, _buildRoute(const GoalScreen()));
+        break;
+      case "Calculator":
+        Navigator.push(context, _buildRoute(const WhatIfCalculatorScreen()));
+        break;
+      case "Risk Alerts":
+        Navigator.push(context, _buildRoute(const RiskAlertScreen()));
+        break;
+      case "Milestones":
+        Navigator.push(context, _buildRoute(const MilestoneScreen()));
+        break;
+      case "Credit Score":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreditScoreScreen()),
+        );
+        break;
+      case "Loan Status":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoanStatusScreen()),
+        );
+        break;
+      default:
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$title tapped')));
     }
-}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,10 +202,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
-        title: const Text("DreamSacco Dashboard", style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text(
+          "DreamSacco Dashboard",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         actions: [
           IconButton(
-            onPressed: () {}, 
+            onPressed: () {},
             icon: const Icon(Icons.notifications_outlined),
           ),
           const Padding(
@@ -166,25 +218,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
               backgroundColor: Colors.white24,
               child: Icon(Icons.person, size: 18, color: Colors.white),
             ),
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, 
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               getGreeting(),
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
-              userName, 
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+              userName,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 16),
-            
+
             // Balance Card Section
             Container(
               decoration: BoxDecoration(
@@ -199,40 +259,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: const Color(0xFF0D47A1).withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
-                ]
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("Account Summary", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Text(
+                            "Account Summary",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text("ID: $memberId", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          Text(
+                            "ID: $memberId",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                       IconButton(
                         color: Colors.white,
-                        onPressed: () => setState(() => hideBalance = !hideBalance),
-                        icon: Icon(hideBalance ? Icons.visibility_off : Icons.visibility),
-                      )
+                        onPressed: () =>
+                            setState(() => hideBalance = !hideBalance),
+                        icon: Icon(
+                          hideBalance ? Icons.visibility_off : Icons.visibility,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround, 
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       Expanded(
                         child: Column(
                           children: [
-                            const Text("Savings", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Text(
+                              "Savings",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(hideBalance ? "******" : savingsAmount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))
+                            Text(
+                              hideBalance ? "******" : savingsAmount,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -240,29 +329,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            const Text("Loan Balance", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Text(
+                              "Loan Balance",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(hideBalance ? "******" : loanAmount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))
+                            Text(
+                              hideBalance ? "******" : loanAmount,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Chip(
-                    avatar: const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                    label: Text("Contributions: $contributionStatus", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
+                    avatar: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 18,
+                    ),
+                    label: Text(
+                      "Contributions: $contributionStatus",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D47A1),
+                      ),
+                    ),
                     backgroundColor: Colors.white,
                     side: BorderSide.none,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                  )
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            
-            // Quick Actions Section (Merged Layout)
-            const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+
+            // Quick Actions Section
+            const Text(
+              "Quick Actions",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 12),
             Center(
               child: Wrap(
@@ -279,22 +399,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Services Grid Section
-            const Text("Services", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const Text(
+              "Services",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: services.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.15),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.15,
+              ),
               itemBuilder: (c, i) {
                 final s = services[i];
                 return Card(
                   color: Colors.white,
                   surfaceTintColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0.5,
                   child: InkWell(
                     onTap: () => _handleServiceTap(s["title"]),
@@ -302,23 +435,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center, 
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            backgroundColor: (s["color"] as Color).withValues(alpha: .12),
+                            backgroundColor: (s["color"] as Color).withValues(
+                              alpha: .12,
+                            ),
                             child: Icon(s["icon"], color: s["color"]),
                           ),
                           const SizedBox(height: 10),
-                          Text(s["title"], textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text(
+                            s["title"],
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(s["subtitle"], style: TextStyle(color: Colors.grey.shade600, fontSize: 12))
+                          Text(
+                            s["subtitle"],
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 );
               },
-            )
+            ),
           ],
         ),
       ),
@@ -327,21 +475,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onTap: (i) => setState(() => currentIndex = i),
         selectedItemColor: const Color(0xFF0D47A1),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_balance),
             label: 'Accounts',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.more_horiz),
-            label: 'More',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
         ],
       ),
     );
   }
 }
-
