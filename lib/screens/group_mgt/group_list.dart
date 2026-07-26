@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
-import '../../services/credit_score.dart';
+import '../../services/credit_score_service.dart';
 import '../../models/group.dart';
 import 'group_create.dart';
 import 'group_detail.dart';
@@ -16,7 +16,7 @@ class GroupListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: MockCreditScoreService(),
+      creditScoreService: CreditScoreService(),
     );
 
     return Scaffold(

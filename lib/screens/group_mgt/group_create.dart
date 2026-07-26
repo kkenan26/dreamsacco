@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
-import '../../services/credit_score.dart';
+import '../../services/credit_score_service.dart';
 import '../../models/group.dart';
 
 class CreateGroupScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   bool _isSubmitting = false;
 
   final GroupService _groupService = GroupService(
-    creditScoreService: MockCreditScoreService(),
+    creditScoreService: CreditScoreService(),
   );
 
   // TODO: replace with FirebaseAuth.instance.currentUser!.uid once auth is wired in
@@ -105,7 +105,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(labelText: 'Group Type'),
                 items: const [
                   DropdownMenuItem(value: 'public', child: Text('Public')),
@@ -162,7 +162,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedFrequencyUnit,
+                      initialValue: _selectedFrequencyUnit,
                       decoration: const InputDecoration(labelText: 'Unit'),
                       items: const [
                         DropdownMenuItem(value: 'days', child: Text('Days')),

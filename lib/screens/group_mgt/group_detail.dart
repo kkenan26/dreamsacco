@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/group.dart';
-import '../../services/credit_score.dart';
+import '../../services/credit_score_service.dart';
 import '../../models/group.dart';
 import '../../models/member.dart';
 import 'join_requests.dart';
@@ -15,7 +15,7 @@ class GroupDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final GroupService groupService = GroupService(
-      creditScoreService: MockCreditScoreService(),
+      creditScoreService: CreditScoreService(),
     );
 
     final progress = group.goalAmount > 0
@@ -52,7 +52,7 @@ class GroupDetailScreen extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () async {
-                final groupService = GroupService(creditScoreService: MockCreditScoreService());
+                final groupService = GroupService(creditScoreService: CreditScoreService());
                 await groupService.requestToLeaveGroup(
                   groupId: group.id,
                   userId: 'test_user_456', // TODO: replace with real logged-in user ID
