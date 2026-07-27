@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/group_picker.dart';
 
 class LoanRequestScreen extends StatefulWidget {
   const LoanRequestScreen({super.key});
@@ -29,28 +30,18 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
   void _loadUserData() async {
     String uid = _auth.currentUser?.uid ?? '';
-
-    // Get user credit score and loan limit
     DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
-    if (userDoc.exists) {
+    if (userDoc.exists && mounted) {
       setState(() {
         _userCreditScore = (userDoc['creditScore'] as num?)?.toInt() ?? 0;
         _loanLimit = (userDoc['loanLimit'] as num?)?.toInt() ?? 0;
       });
     }
+  }
 
-    // Find user's group
-    QuerySnapshot memberGroups = await _db
-        .collectionGroup('members')
-        .where(FieldPath.documentId, isEqualTo: uid)
-        .limit(1)
-        .get();
-
-    if (memberGroups.docs.isNotEmpty) {
-      setState(() {
-        _groupId = memberGroups.docs.first.reference.parent.parent!.id;
-      });
-    }
+  void _onGroupSelected(String? groupId) {
+    if (groupId == null) return;
+    setState(() => _groupId = groupId);
   }
 
   double _getInterestRate() {
@@ -72,9 +63,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
     if (requestedAmount > _loanLimit) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                "Amount exceeds your loan limit of UGX $_loanLimit")),
+        SnackBar(content: Text("Amount exceeds your loan limit of UGX $_loanLimit")),
       );
       return;
     }
@@ -88,12 +77,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     DateTime currentDate = DateTime.now();
 
     for (int i = 1; i <= _selectedMonths; i++) {
-      currentDate =
-          DateTime(currentDate.year, currentDate.month + 1, currentDate.day);
+      currentDate = DateTime(currentDate.year, currentDate.month + 1, currentDate.day);
       schedule.add({
         "month": "Month $i",
-        "dueDate":
-        "${currentDate.day}/${currentDate.month}/${currentDate.year}",
+        "dueDate": "${currentDate.day}/${currentDate.month}/${currentDate.year}",
         "amount": "UGX ${monthlyInstallment.toStringAsFixed(0)}",
         "dueDateRaw": currentDate.toIso8601String(),
         "amountRaw": monthlyInstallment,
@@ -107,15 +94,14 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   void _submitLoan() async {
     if (_repaymentSchedule.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please generate a repayment schedule first")),
+        const SnackBar(content: Text("Please generate a repayment schedule first")),
       );
       return;
     }
 
     if (_groupId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You must be in a group to request a loan")),
+        const SnackBar(content: Text("Select a group to request a loan from")),
       );
       return;
     }
@@ -126,11 +112,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       String uid = _auth.currentUser?.uid ?? '';
       double amount = double.tryParse(_amountController.text) ?? 0;
 
-      await _db
-          .collection('groups')
-          .doc(_groupId)
-          .collection('loans')
-          .add({
+      await _db.collection('groups').doc(_groupId).collection('loans').add({
         'requesterId': uid,
         'amount': amount,
         'creditScoreAtRequest': _userCreditScore,
@@ -148,18 +130,15 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Loan request submitted successfully"),
-            backgroundColor: Colors.green),
+        const SnackBar(content: Text("Loan request submitted successfully"), backgroundColor: Colors.green),
       );
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
 
-    setState(() => _isSubmitting = false);
+    if (mounted) setState(() => _isSubmitting = false);
   }
 
   @override
@@ -176,7 +155,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Credit score info banner
+            GroupPicker(selectedGroupId: _groupId, onChanged: _onGroupSelected),
+            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -190,36 +170,22 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Your Credit Score",
-                          style: TextStyle(
-                              color: Color(0xFF0D47A1),
-                              fontWeight: FontWeight.bold)),
-                      Text("$_userCreditScore / 100",
-                          style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D47A1))),
+                      const Text("Your Credit Score", style: TextStyle(color: Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
+                      Text("$_userCreditScore / 100", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text("Loan Limit",
-                          style: TextStyle(color: Color(0xFF0D47A1))),
-                      Text("UGX $_loanLimit",
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green)),
+                      const Text("Loan Limit", style: TextStyle(color: Color(0xFF0D47A1))),
+                      Text("UGX $_loanLimit", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-
-            const Text("Requested Amount (UGX)",
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("Requested Amount (UGX)", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
@@ -228,14 +194,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 hintText: "e.g. 500000",
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 20),
-
-            const Text("Repayment Duration",
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("Repayment Duration", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -253,13 +216,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     DropdownMenuItem(value: 6, child: Text("6 Months")),
                     DropdownMenuItem(value: 12, child: Text("12 Months")),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _selectedMonths = value!),
+                  onChanged: (value) => setState(() => _selectedMonths = value!),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -267,24 +228,17 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0D47A1),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: _generateSchedule,
-                child: const Text("Generate Repayment Schedule",
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text("Generate Repayment Schedule", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 24),
-
             if (_repaymentSchedule.isNotEmpty) ...[
               const Text(
                 "Auto-Generated Repayment Schedule",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               const SizedBox(height: 12),
               ListView.builder(
@@ -296,35 +250,22 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                        const Color(0xFF0D47A1).withValues(alpha: 0.1),
-                        child: Text("${index + 1}",
-                            style: const TextStyle(
-                                color: Color(0xFF0D47A1),
-                                fontWeight: FontWeight.bold)),
+                        backgroundColor: const Color(0xFF0D47A1).withValues(alpha: 0.1),
+                        child: Text("${index + 1}", style: const TextStyle(color: Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
                       ),
-                      title: Text(item["month"],
-                          style:
-                          const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(item["month"], style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text("Due: ${item["dueDate"]}"),
-                      trailing: Text(item["amount"],
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                              fontSize: 14)),
+                      trailing: Text(item["amount"], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14)),
                     ),
                   );
                 },
               ),
               const SizedBox(height: 16),
               _isSubmitting
-                  ? const Center(
-                  child: CircularProgressIndicator(
-                      color: Color(0xFF0D47A1)))
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D47A1)))
                   : SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -332,14 +273,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _submitLoan,
-                  child: const Text("Submit Loan Request",
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
+                  child: const Text("Submit Loan Request", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
