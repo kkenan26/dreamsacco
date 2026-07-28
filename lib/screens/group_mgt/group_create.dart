@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/group.dart';
 import '../../services/adapter.dart';
 import '../../models/group.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -20,7 +21,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _goalDescriptionController = TextEditingController();
   final _contributionController = TextEditingController();
   final _frequencyValueController = TextEditingController(text: '1');
-  final _treasurerIdController = TextEditingController();
+  final _treasurerUsernameController = TextEditingController();
   final _treasurerMobileMoneyController = TextEditingController();
   final _totalSharesController = TextEditingController();
   final _contributionPerShareController = TextEditingController();
@@ -44,7 +45,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     _goalDescriptionController.dispose();
     _contributionController.dispose();
     _frequencyValueController.dispose();
-    _treasurerIdController.dispose();
+    _treasurerUsernameController.dispose();
     _treasurerMobileMoneyController.dispose();
     _totalSharesController.dispose();
     _contributionPerShareController.dispose();
@@ -57,12 +58,34 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // ====== NEW: Look up treasurer by username ======
+      String treasurerUsername = _treasurerUsernameController.text.trim();
+      String treasurerId = _currentUserId; // default to yourself
+
+      if (treasurerUsername.isNotEmpty && treasurerUsername != _nameController.text.trim()) {
+        QuerySnapshot userQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('name', isEqualTo: treasurerUsername)
+            .limit(1)
+            .get();
+
+        if (userQuery.docs.isEmpty) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No user found with username: $treasurerUsername')),
+          );
+          return;
+        }
+        treasurerId = userQuery.docs.first.id;
+      }
+      // ====== END NEW ======
+
       Group newGroup = Group.create(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _selectedType,
         adminId: _currentUserId,
-        treasurerId: _treasurerIdController.text.trim(),
+        treasurerId: treasurerId, // <-- now uses the resolved ID, not the controller
         treasurerMobileMoney: _treasurerMobileMoneyController.text.trim(),
         goalAmount: double.parse(_goalAmountController.text.trim()),
         goalDescription: _goalDescriptionController.text.trim(),
@@ -156,10 +179,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               const Text('Treasurer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _treasurerIdController,
-                decoration: const InputDecoration(labelText: 'Treasurer User ID'),
-                validator: (value) =>
-                (value == null || value.trim().isEmpty) ? 'Enter the treasurer\'s user ID' : null,
+                controller: _treasurerUsernameController,
+                decoration: const InputDecoration(
+                  labelText: 'Treasurer Username',
+                  helperText: 'Enter the exact name they registered with',
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter the treasurer\'s username' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(

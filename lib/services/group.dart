@@ -31,6 +31,50 @@ class GroupService {
     );
     await membersRef.doc(userId).set(newMember.toMap());
   }
+  Future<void> recordLoanRepayment({
+    required String groupId,
+    required String loanId,
+    required String userId,
+    required double amountPaid,
+  }) async {
+    DocumentSnapshot loanDoc = await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .doc(loanId)
+        .get();
+
+    if (!loanDoc.exists) throw Exception('Loan not found');
+
+    Map<String, dynamic> data = loanDoc.data() as Map<String, dynamic>;
+    double totalRepaid = ((data['totalRepaid'] ?? 0) as num).toDouble() + amountPaid;
+    double originalAmount = ((data['amount'] ?? 0) as num).toDouble();
+
+    String newStatus = totalRepaid >= originalAmount ? 'cleared' : 'repaying';
+
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .doc(loanId)
+        .update({
+      'totalRepaid': totalRepaid,
+      'status': newStatus,
+      'lastRepaymentAt': FieldValue.serverTimestamp(),
+    });
+
+    // If fully cleared, increment user's totalLoansRepaid
+    if (newStatus == 'cleared') {
+      await _firestore.collection('users').doc(userId).update({
+        'totalLoansRepaid': FieldValue.increment(1),
+      });
+    }
+
+    // Add repayment back to group balance
+    await _firestore.collection('groups').doc(groupId).update({
+      'totalBalance': FieldValue.increment(amountPaid),
+    });
+  }
 
   Future<String> createGroup(Group group) async {
     DocumentReference groupDocRef = _firestore.collection('groups').doc();
@@ -450,19 +494,36 @@ class GroupService {
     required String loanId,
     required String requesterId,
   }) async {
+    DocumentSnapshot loanDoc = await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('loans')
+        .doc(loanId)
+        .get();
+
+    if (!loanDoc.exists) throw Exception('Loan not found');
+
+    double amount = ((loanDoc.data() as Map<String, dynamic>)['amount'] ?? 0).toDouble();
+
+    // Deduct from group balance
+    await _firestore.collection('groups').doc(groupId).update({
+      'totalBalance': FieldValue.increment(-amount),
+    });
+
+    // Mark as repaying (not just approved — approved is a dead state)
     await _firestore
         .collection('groups')
         .doc(groupId)
         .collection('loans')
         .doc(loanId)
-        .update({'status': 'approved'});
+        .update({'status': 'repaying'});
 
     DocumentSnapshot groupDoc = await _firestore.collection('groups').doc(groupId).get();
     String groupName = (groupDoc.data() as Map<String, dynamic>)['name'] ?? 'the group';
 
     await _sendNotification(
       targetUserId: requesterId,
-      message: 'Your loan request in $groupName was approved!',
+      message: 'Your loan of UGX ${amount.toStringAsFixed(0)} in $groupName was approved and disbursed!',
       type: 'loan_approved',
       groupId: groupId,
       groupName: groupName,

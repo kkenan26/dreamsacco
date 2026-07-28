@@ -16,7 +16,7 @@ import 'whatif/what_if_calculator_screen.dart';
 import 'group_mgt/group_list.dart';
 import 'welcome_screen.dart';
 import 'group_mgt/notifications.dart';
-import 'loan_screen.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -43,6 +43,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboardData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadDashboardData();
+  }
+
   void _loadDashboardData() async {
     try {
       String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -53,7 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .get();
 
       if (!userDoc.exists || !mounted) return;
-
       Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
 
       String groupId = '';
@@ -77,6 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .collection('contributions')
             .where('userId', isEqualTo: uid)
             .where('month', isEqualTo: month)
+            .where('status', isEqualTo: 'paid')
             .limit(1)
             .get();
 
@@ -85,20 +91,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      int totalContributions =
-          (data['totalContributions'] as num?)?.toInt() ?? 0;
-      int loanLimitVal = (data['loanLimit'] as num?)?.toInt() ?? 0;
+      // ✅ FIX: Read totalSavings (money), not totalContributions (count)
+      double totalSavings = (data['totalSavings'] as num?)?.toDouble() ?? 0.0;
+      double loanLimitVal = (data['loanLimit'] as num?)?.toDouble() ?? 0.0;
       int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
       int streak = (data['contributionStreak'] as num?)?.toInt() ?? 0;
+
+      String fmt(double v) => v.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
       if (!mounted) return;
       setState(() {
         userName = data['name'] ?? 'User';
         memberId = uid.substring(0, 6).toUpperCase();
-        savingsAmount =
-        "UGX ${totalContributions.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
-        loanAmount =
-        "UGX ${loanLimitVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
+        savingsAmount = "UGX ${fmt(totalSavings)}";
+        loanAmount = "UGX ${fmt(loanLimitVal)}";
         contributionStatus = contribution;
         savingsGoal = "$creditScore% Score";
         riskAlert = streak > 2 ? "Good Standing" : "Build Your Streak";
@@ -137,20 +144,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "icon": Icons.flag,
       "color": Colors.blue,
       "screen": const GoalScreen(),
-    },
-    {
-      "title": "What-If Calc",
-      "subtitle": "Estimate Loan",
-      "icon": Icons.calculate,
-      "color": Colors.purple,
-      "screen": const WhatIfCalculatorScreen(),
-    },
-    {
-      "title": "Risk Alerts",
-      "subtitle": riskAlert,
-      "icon": Icons.warning_amber,
-      "color": Colors.red,
-      "screen": const RiskAlertScreen(),
     },
     {
       "title": "Milestones",

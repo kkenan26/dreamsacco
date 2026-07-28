@@ -76,7 +76,7 @@ class Group {
         totalBalance: (data['totalBalance'] ?? 0.0).toDouble(),
         goalAmount: (data['goalAmount'] ?? 0.0).toDouble(),
         goalDescription: data['goalDescription'] ?? '',
-        contribution: (data['Contribution'] ?? 0.0).toDouble(),
+        contribution: (data['contribution'] ?? 0.0).toDouble(),
         memberIds: List<String>.from(data['memberIds'] ?? []),
         createdAt: (data['createdAt'] as Timestamp).toDate(),
         contributionFrequencyValue: data['contributionFrequencyValue'] ?? 1,

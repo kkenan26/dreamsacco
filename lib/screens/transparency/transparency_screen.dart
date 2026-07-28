@@ -26,6 +26,9 @@ class _TransparencyScreenState extends State<TransparencyScreen> {
     setState(() {
       _selectedGroupId = groupId;
       _isLoading = true;
+      _memberPayments = []; // clear old data
+      _totalBalance = 0;    // clear old balance
+      _groupName = '';      // clear old name
     });
     await _loadTransparencyData(groupId);
   }

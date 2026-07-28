@@ -121,6 +121,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
       String uid = _auth.currentUser?.uid ?? '';
       String month = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
 
+      // 1. Record contribution
       await _db.collection('groups').doc(_selectedGroupId).collection('contributions').add({
         'userId': uid,
         'amount': amount,
@@ -130,25 +131,55 @@ class _ContributionScreenState extends State<ContributionScreen> {
         'momoReference': result['referenceId'],
       });
 
-      DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
-      int streak = (userDoc.data() as Map<String, dynamic>?)?['contributionStreak'] ?? 0;
-      int total = (userDoc.data() as Map<String, dynamic>?)?['totalContributions'] ?? 0;
-
-      await _db.collection('users').doc(uid).update({
-        'contributionStreak': streak + 1,
-        'totalContributions': total + 1,
+      // 2. UPDATE GROUP BALANCE — THIS WAS MISSING!
+      await _db.collection('groups').doc(_selectedGroupId).update({
+        'totalBalance': FieldValue.increment(amount),
       });
 
+      // 3. UPDATE USER'S TOTAL SAVINGS — THIS WAS MISSING!
+      await _db.collection('users').doc(uid).update({
+        'totalSavings': FieldValue.increment(amount),
+      });
+
+      // 4. FIX STREAK LOGIC — check if actually consecutive
+      DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
+      var userData = userDoc.data() as Map<String, dynamic>? ?? {};
+      int currentStreak = (userData['contributionStreak'] as num?)?.toInt() ?? 0;
+      Timestamp? lastTs = userData['lastContributionAt'] as Timestamp?;
+
+      int newStreak = 1;
+      if (lastTs != null) {
+        DateTime last = lastTs.toDate();
+        DateTime now = DateTime.now();
+        DateTime lastMonth = DateTime(now.year, now.month - 1, 1);
+        DateTime lastContribMonth = DateTime(last.year, last.month, 1);
+        if (lastContribMonth.year == lastMonth.year && lastContribMonth.month == lastMonth.month) {
+          newStreak = currentStreak + 1;
+        }
+      }
+
+      await _db.collection('users').doc(uid).update({
+        'contributionStreak': newStreak,
+        'totalContributions': FieldValue.increment(1),
+        'lastContributionAt': FieldValue.serverTimestamp(),
+      });
+
+      // 5. OPTIMISTIC UI — don't wait for Firestore roundtrip
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
         _statusMessage = '';
+        _isThisMonthPaid = true;
+        _recentContributions.insert(0, {
+          'month': month,
+          'amount': amount,
+          'status': 'paid',
+        });
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Contribution successful!'), backgroundColor: Colors.green),
       );
-      await _loadGroupContributions(_selectedGroupId!);
     } else {
       if (!mounted) return;
       setState(() {

@@ -92,11 +92,6 @@ class NotificationsScreen extends StatelessWidget {
                         ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                        onPressed: () {
-                          groupService.deleteNotification(notif['id']);
-                        },
-                      ),IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
                         onPressed: () async {
                           bool confirmed = await _confirmAction(
                             context,
