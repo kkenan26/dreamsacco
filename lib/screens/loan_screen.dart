@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/group.dart';
+import '../../services/adapter.dart';
 
 class LoanScreen extends StatefulWidget {
   const LoanScreen({super.key});
@@ -341,6 +343,41 @@ class _LoanStatusTabState extends State<_LoanStatusTab> {
     _loadLoans();
   }
 
+  Future<void> _repayLoan(String loanId, double monthlyAmount) async {
+    final groupService = GroupService(creditScoreService: RealCreditScoreAdapter());
+    String uid = _auth.currentUser!.uid;
+
+    // Find the groupId (you already have this logic in _loadLoans)
+    QuerySnapshot memberGroups = await _db
+        .collectionGroup('members')
+        .where('userId', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (memberGroups.docs.isEmpty) return;
+    String groupId = memberGroups.docs.first.reference.parent.parent!.id;
+
+    try {
+      await groupService.recordLoanRepayment(
+        groupId: groupId,
+        loanId: loanId,
+        userId: uid,
+        amountPaid: monthlyAmount,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Repayment recorded!'), backgroundColor: Colors.green),
+      );
+      _loadLoans(); // refresh the list
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
   void _loadLoans() async {
     try {
       String uid = _auth.currentUser?.uid ?? '';
@@ -454,6 +491,37 @@ class _LoanStatusTabState extends State<_LoanStatusTab> {
                     Text("Interest: ${(loan['interestRate'] * 100).toStringAsFixed(0)}%", style: const TextStyle(color: Colors.grey, fontSize: 13)),
                   ],
                 ),
+                const SizedBox(height: 12),
+                if (status == 'repaying' || status == 'approved') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D47A1),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.payments, size: 18),
+                      label: const Text("Make Repayment", style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        // Calculate monthly installment from the stored repayment schedule
+                        List<dynamic> schedule = loan['repaymentSchedule'] ?? [];
+                        double monthly = 0;
+                        if (schedule.isNotEmpty) {
+                          monthly = (schedule[0]['amount'] as num?)?.toDouble() ?? 0;
+                        }
+                        if (monthly <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No repayment schedule found')),
+                          );
+                          return;
+                        }
+                        _repayLoan(loan['id'], monthly);
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

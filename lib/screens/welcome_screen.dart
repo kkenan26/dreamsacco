@@ -44,7 +44,7 @@ class WelcomeScreen extends StatelessWidget {
                     minimumSize: const Size(double.infinity, 50),
                     backgroundColor: const Color(0xFF0D47A1),
                     foregroundColor: Colors.white,
-                    shape: RoundedSuperellipseBorder(
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -65,7 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                       minimumSize: const Size(double.infinity, 50),
                       foregroundColor: const Color(0xFF0D47A1),
                       side: const BorderSide(color: Color(0xFF0D47A1), width: 2),
-                      shape: RoundedSuperellipseBorder(
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),

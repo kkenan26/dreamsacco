@@ -8,7 +8,7 @@ class MomoService {
   static const String _userApiKey = '5a83b23063104b2e8e7ce08bb78677eb';
   static const String _baseUrl = 'https://sandbox.momodeveloper.mtn.com';
   static const String _targetEnvironment = 'sandbox';
-  static const String _currency = 'EUR';
+  static const String _currency = 'UGX';
 
   Future<String?> getAccessToken() async {
     try {
