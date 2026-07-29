@@ -7,11 +7,11 @@ class RecordContributionScreen extends StatefulWidget {
   final double suggestedAmount;
 
   const RecordContributionScreen({
-    Key? key,
+    super.key,
     required this.groupId,
     required this.userId,
     required this.suggestedAmount,
-  }) : super(key: key);
+  });
 
   @override
   State<RecordContributionScreen> createState() => _RecordContributionScreenState();

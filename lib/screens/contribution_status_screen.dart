@@ -10,7 +10,7 @@ import '../widgets/streak_badge.dart';
 class ContributionStatusScreen extends StatefulWidget {
   final String groupId;
 
-  const ContributionStatusScreen({Key? key, required this.groupId}) : super(key: key);
+  const ContributionStatusScreen({super.key, required this.groupId});
 
   @override
   State<ContributionStatusScreen> createState() => _ContributionStatusScreenState();

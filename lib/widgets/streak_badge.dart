@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class StreakBadge extends StatelessWidget {
   final int streak;
 
-  const StreakBadge({Key? key, required this.streak}) : super(key: key);
+  const StreakBadge({super.key, required this.streak});
 
   Color _colorForStreak() {
     if (streak >= 12) return Colors.purple;
@@ -20,7 +20,7 @@ class StreakBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _colorForStreak().withOpacity(0.15),
+        color: _colorForStreak().withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _colorForStreak()),
       ),
