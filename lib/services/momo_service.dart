@@ -8,12 +8,12 @@ class MomoService {
   static const String _userApiKey = '5a83b23063104b2e8e7ce08bb78677eb';
   static const String _baseUrl = 'https://sandbox.momodeveloper.mtn.com';
   static const String _targetEnvironment = 'sandbox';
-  static const String _currency = 'UGX';
+  static const String _currency = 'EUR';
 
   Future<String?> getAccessToken() async {
     try {
       String credentials =
-          base64Encode(utf8.encode('$_userId:$_userApiKey'));
+      base64Encode(utf8.encode('$_userId:$_userApiKey'));
       final response = await http.post(
         Uri.parse('$_baseUrl/collection/token/'),
         headers: {

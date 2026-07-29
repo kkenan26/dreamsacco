@@ -1,4 +1,3 @@
-// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,15 +6,12 @@ import '../services/auth_service.dart';
 import 'contribution_screen.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_screen.dart';
-import 'goals/goal_screen.dart';
 import 'milestones/milestone_screen.dart';
-import 'risk/risk_alert_screen.dart';
-import 'shares/shares_screen.dart';
 import 'transparency/transparency_screen.dart';
-import 'whatif/what_if_calculator_screen.dart';
 import 'group_mgt/group_list.dart';
 import 'welcome_screen.dart';
 import 'group_mgt/notifications.dart';
+import 'group_mgt/profile.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -91,7 +87,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      // ✅ FIX: Read totalSavings (money), not totalContributions (count)
       double totalSavings = (data['totalSavings'] as num?)?.toDouble() ?? 0.0;
       double loanLimitVal = (data['loanLimit'] as num?)?.toDouble() ?? 0.0;
       int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
@@ -139,13 +134,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "screen": const ContributionScreen(),
     },
     {
-      "title": "Savings Goals",
-      "subtitle": "View Goals",
-      "icon": Icons.flag,
-      "color": Colors.blue,
-      "screen": const GoalScreen(),
-    },
-    {
       "title": "Milestones",
       "subtitle": milestones,
       "icon": Icons.emoji_events,
@@ -158,13 +146,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "icon": Icons.bar_chart,
       "color": Colors.teal,
       "screen": const TransparencyScreen(),
-    },
-    {
-      "title": "Shares",
-      "subtitle": "View Shares",
-      "icon": Icons.pie_chart,
-      "color": Colors.indigo,
-      "screen": const SharesScreen(),
     },
   ];
 
@@ -287,6 +268,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: () => Navigator.push(
                 context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen())),
+            icon: const Icon(Icons.person),
+          ),
+          IconButton(
+            onPressed: () => Navigator.push(
+                context,
                 MaterialPageRoute(builder: (context) => const NotificationsScreen())),
             icon: const Icon(Icons.notifications),
           ),
@@ -317,8 +304,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Colors.black87),
             ),
             const SizedBox(height: 16),
-
-            // Balance Card
             Container(
               decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -437,8 +422,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Quick Actions Section
             const Text(
               "Quick Actions",
               style: TextStyle(
@@ -461,8 +444,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Services Grid
             const Text("Services",
                 style: TextStyle(
                     fontSize: 18,
@@ -492,7 +473,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (context) =>
-                            s["screen"] as Widget)),
+                            s["screen"] as Widget)).then((_) => _loadDashboardData()),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
