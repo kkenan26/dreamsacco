@@ -25,6 +25,10 @@ class _ContributionScreenState extends State<ContributionScreen> {
   List<Map<String, dynamic>> _recentContributions = [];
   bool _isThisMonthPaid = false;
 
+  // FIX: Track partial payment state
+  double _currentMonthPaidAmount = 0;
+  double _requiredContributionAmount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -64,11 +68,15 @@ class _ContributionScreenState extends State<ContributionScreen> {
         .get();
 
     String currentMonth = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
-    bool paidThisMonth = false;
+
+    // FIX: Sum all payments for the current month to determine if fully paid
+    double totalPaidThisMonth = 0;
 
     List<Map<String, dynamic>> loaded = contributions.docs.map((doc) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      if (data['month'] == currentMonth && data['status'] == 'paid') paidThisMonth = true;
+      if (data['month'] == currentMonth) {
+        totalPaidThisMonth += (data['amount'] ?? 0).toDouble();
+      }
       return {
         'month': data['month'] ?? '',
         'amount': (data['amount'] ?? 0).toDouble(),
@@ -79,7 +87,9 @@ class _ContributionScreenState extends State<ContributionScreen> {
     if (mounted) {
       setState(() {
         _recentContributions = loaded;
-        _isThisMonthPaid = paidThisMonth;
+        _isThisMonthPaid = totalPaidThisMonth >= contributionAmount;
+        _currentMonthPaidAmount = totalPaidThisMonth;
+        _requiredContributionAmount = contributionAmount;
         if (contributionAmount > 0) {
           _amountController.text = contributionAmount.toStringAsFixed(0);
         }
@@ -121,27 +131,35 @@ class _ContributionScreenState extends State<ContributionScreen> {
       String uid = _auth.currentUser?.uid ?? '';
       String month = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
 
+      // FIX: Determine if payment is full or partial
+      DocumentSnapshot groupDoc = await _db.collection('groups').doc(_selectedGroupId).get();
+      double requiredAmount = 0;
+      if (groupDoc.exists) {
+        requiredAmount = ((groupDoc.data() as Map<String, dynamic>)['contribution'] ?? 0).toDouble();
+      }
+      String paymentStatus = (requiredAmount > 0 && amount < requiredAmount) ? 'partial' : 'paid';
+
       // 1. Record contribution
       await _db.collection('groups').doc(_selectedGroupId).collection('contributions').add({
         'userId': uid,
         'amount': amount,
         'month': month,
         'paidAt': FieldValue.serverTimestamp(),
-        'status': 'paid',
+        'status': paymentStatus,
         'momoReference': result['referenceId'],
       });
 
-      // 2. UPDATE GROUP BALANCE — THIS WAS MISSING!
+      // 2. UPDATE GROUP BALANCE
       await _db.collection('groups').doc(_selectedGroupId).update({
         'totalBalance': FieldValue.increment(amount),
       });
 
-      // 3. UPDATE USER'S TOTAL SAVINGS — THIS WAS MISSING!
+      // 3. UPDATE USER'S TOTAL SAVINGS
       await _db.collection('users').doc(uid).update({
         'totalSavings': FieldValue.increment(amount),
       });
 
-      // 4. FIX STREAK LOGIC — check if actually consecutive
+      // 4. FIX STREAK LOGIC
       DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
       var userData = userDoc.data() as Map<String, dynamic>? ?? {};
       int currentStreak = (userData['contributionStreak'] as num?)?.toInt() ?? 0;
@@ -164,16 +182,17 @@ class _ContributionScreenState extends State<ContributionScreen> {
         'lastContributionAt': FieldValue.serverTimestamp(),
       });
 
-      // 5. OPTIMISTIC UI — don't wait for Firestore roundtrip
+      // 5. OPTIMISTIC UI
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
         _statusMessage = '';
-        _isThisMonthPaid = true;
+        if (paymentStatus == 'paid') _isThisMonthPaid = true;
+        _currentMonthPaidAmount += amount;
         _recentContributions.insert(0, {
           'month': month,
           'amount': amount,
-          'status': 'paid',
+          'status': paymentStatus,
         });
       });
 
@@ -208,23 +227,42 @@ class _ContributionScreenState extends State<ContributionScreen> {
           GroupPicker(selectedGroupId: _selectedGroupId, onChanged: _onGroupSelected),
           const SizedBox(height: 20),
           if (_selectedGroupId != null) ...[
+            // FIX: Show partial payment status in the banner
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _isThisMonthPaid ? Colors.green.shade50 : Colors.orange.shade50,
+                color: _isThisMonthPaid
+                    ? Colors.green.shade50
+                    : (_currentMonthPaidAmount > 0 ? Colors.amber.shade50 : Colors.orange.shade50),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _isThisMonthPaid ? Colors.green.shade200 : Colors.orange.shade200),
+                border: Border.all(
+                  color: _isThisMonthPaid
+                      ? Colors.green.shade200
+                      : (_currentMonthPaidAmount > 0 ? Colors.amber.shade200 : Colors.orange.shade200),
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(_isThisMonthPaid ? Icons.check_circle : Icons.warning_amber,
-                      color: _isThisMonthPaid ? Colors.green : Colors.orange),
+                  Icon(
+                    _isThisMonthPaid
+                        ? Icons.check_circle
+                        : (_currentMonthPaidAmount > 0 ? Icons.info_outline : Icons.warning_amber),
+                    color: _isThisMonthPaid
+                        ? Colors.green
+                        : (_currentMonthPaidAmount > 0 ? Colors.amber.shade800 : Colors.orange),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _isThisMonthPaid ? "This month's contribution is paid." : "This month's contribution is due.",
+                      _isThisMonthPaid
+                          ? "This month's contribution is paid."
+                          : (_currentMonthPaidAmount > 0
+                          ? "Partially paid: UGX ${_currentMonthPaidAmount.toStringAsFixed(0)} of UGX ${_requiredContributionAmount.toStringAsFixed(0)}"
+                          : "This month's contribution is due."),
                       style: TextStyle(
-                        color: _isThisMonthPaid ? Colors.green.shade800 : Colors.orange.shade800,
+                        color: _isThisMonthPaid
+                            ? Colors.green.shade800
+                            : (_currentMonthPaidAmount > 0 ? Colors.amber.shade900 : Colors.orange.shade800),
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -306,13 +344,30 @@ class _ContributionScreenState extends State<ContributionScreen> {
                 ),
                 child: Row(
                   children: [
+                    // FIX: Show different icon for partial payments
                     Icon(
-                      c['status'] == 'paid' ? Icons.check_circle : Icons.error_outline,
-                      color: c['status'] == 'paid' ? Colors.green : Colors.red,
+                      c['status'] == 'paid'
+                          ? Icons.check_circle
+                          : (c['status'] == 'partial' ? Icons.timelapse : Icons.error_outline),
+                      color: c['status'] == 'paid'
+                          ? Colors.green
+                          : (c['status'] == 'partial' ? Colors.orange : Colors.red),
                       size: 20,
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(c['month'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c['month'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          if (c['status'] == 'partial')
+                            Text(
+                              'Partial',
+                              style: TextStyle(color: Colors.orange.shade700, fontSize: 11, fontWeight: FontWeight.w500),
+                            ),
+                        ],
+                      ),
+                    ),
                     Text('UGX ${(c['amount'] as double).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),

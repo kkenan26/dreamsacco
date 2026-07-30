@@ -105,7 +105,8 @@ class MemberManagementScreen extends StatelessWidget {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (isAdmin)
+                              // FIX: Only show role dropdown if current user is admin AND not looking at themselves
+                              if (isAdmin && member.userId != currentUserId)
                                 DropdownButton<String>(
                                   value: member.role,
                                   items: const [
@@ -115,6 +116,13 @@ class MemberManagementScreen extends StatelessWidget {
                                   ],
                                   onChanged: (newRole) async {
                                     if (newRole == null) return;
+                                    // Extra guard: prevent self-role-change
+                                    if (member.userId == currentUserId) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('You cannot change your own role')),
+                                      );
+                                      return;
+                                    }
                                     await groupService.updateMemberRole(
                                       groupId: groupId,
                                       userId: member.userId,
@@ -122,7 +130,8 @@ class MemberManagementScreen extends StatelessWidget {
                                     );
                                   },
                                 ),
-                              if (isAdmin)
+                              // FIX: Only show delete if admin AND not trying to delete themselves
+                              if (isAdmin && member.userId != currentUserId)
                                 IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red),
                                   onPressed: () async {

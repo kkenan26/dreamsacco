@@ -74,7 +74,7 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
     DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
     if (userDoc.exists && mounted) {
       setState(() {
-        _userCreditScore = (userDoc['creditScore'] as num?)?.toInt() ?? 0;
+        _userCreditScore = (userDoc['creditScore'] as num?)?.toInt() ?? 50;
         _loanLimit = (userDoc['loanLimit'] as num?)?.toInt() ?? 0;
       });
     }

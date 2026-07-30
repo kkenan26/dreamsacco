@@ -26,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String userName = "Loading...";
   String memberId = "";
-  String savingsAmount = "UGX 0";
   String loanAmount = "UGX 0";
   String contributionStatus = "UNPAID";
   String savingsGoal = "0% Score";
@@ -87,7 +86,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      double totalSavings = (data['totalSavings'] as num?)?.toDouble() ?? 0.0;
       double loanLimitVal = (data['loanLimit'] as num?)?.toDouble() ?? 0.0;
       int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
       int streak = (data['contributionStreak'] as num?)?.toInt() ?? 0;
@@ -99,7 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         userName = data['name'] ?? 'User';
         memberId = uid.substring(0, 6).toUpperCase();
-        savingsAmount = "UGX ${fmt(totalSavings)}";
         loanAmount = "UGX ${fmt(loanLimitVal)}";
         contributionStatus = contribution;
         savingsGoal = "$creditScore% Score";
@@ -352,32 +349,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  // FIX: Removed Savings column. Loan Limit is now centered and full-width.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text("Savings",
-                                style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text(
-                                hideBalance
-                                    ? "******"
-                                    : savingsAmount,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18))
-                          ],
-                        ),
-                      ),
-                      Container(
-                          width: 1,
-                          height: 35,
-                          color: Colors.white30),
                       Expanded(
                         child: Column(
                           children: [
@@ -393,10 +368,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18))
+                                    fontSize: 22))
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
