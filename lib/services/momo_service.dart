@@ -13,7 +13,7 @@ class MomoService {
   Future<String?> getAccessToken() async {
     try {
       String credentials =
-          base64Encode(utf8.encode('$_userId:$_userApiKey'));
+      base64Encode(utf8.encode('$_userId:$_userApiKey'));
       final response = await http.post(
         Uri.parse('$_baseUrl/collection/token/'),
         headers: {

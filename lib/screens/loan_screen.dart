@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/group.dart';
+import '../../services/adapter.dart';
+import '../../widgets/group_picker.dart';
 
 class LoanScreen extends StatefulWidget {
   const LoanScreen({super.key});
@@ -71,22 +74,15 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
     DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
     if (userDoc.exists && mounted) {
       setState(() {
-        _userCreditScore = (userDoc['creditScore'] as num?)?.toInt() ?? 0;
+        _userCreditScore = (userDoc['creditScore'] as num?)?.toInt() ?? 50;
         _loanLimit = (userDoc['loanLimit'] as num?)?.toInt() ?? 0;
       });
     }
+  }
 
-    QuerySnapshot memberGroups = await _db
-        .collectionGroup('members')
-        .where('userId', isEqualTo: uid)
-        .limit(1)
-        .get();
-
-    if (memberGroups.docs.isNotEmpty && mounted) {
-      setState(() {
-        _groupId = memberGroups.docs.first.reference.parent.parent!.id;
-      });
-    }
+  void _onGroupSelected(String? groupId) {
+    if (groupId == null) return;
+    setState(() => _groupId = groupId);
   }
 
   double _getInterestRate() {
@@ -146,7 +142,7 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
 
     if (_groupId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You must be in a group to request a loan")),
+        const SnackBar(content: Text("Select a group to request a loan from")),
       );
       return;
     }
@@ -180,6 +176,7 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
       setState(() {
         _repaymentSchedule = [];
         _amountController.clear();
+        _groupId = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -196,6 +193,8 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          GroupPicker(selectedGroupId: _groupId, onChanged: _onGroupSelected),
+          const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -269,7 +268,7 @@ class _LoanRequestTabState extends State<_LoanRequestTab> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: _generateSchedule,
+              onPressed: _groupId == null ? null : _generateSchedule,
               child: const Text("Generate Repayment Schedule", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
@@ -339,6 +338,40 @@ class _LoanStatusTabState extends State<_LoanStatusTab> {
   void initState() {
     super.initState();
     _loadLoans();
+  }
+
+  Future<void> _repayLoan(String loanId, double monthlyAmount) async {
+    final groupService = GroupService(creditScoreService: RealCreditScoreAdapter());
+    String uid = _auth.currentUser!.uid;
+
+    QuerySnapshot memberGroups = await _db
+        .collectionGroup('members')
+        .where('userId', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (memberGroups.docs.isEmpty) return;
+    String groupId = memberGroups.docs.first.reference.parent.parent!.id;
+
+    try {
+      await groupService.recordLoanRepayment(
+        groupId: groupId,
+        loanId: loanId,
+        userId: uid,
+        amountPaid: monthlyAmount,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Repayment recorded!'), backgroundColor: Colors.green),
+      );
+      _loadLoans();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   void _loadLoans() async {
@@ -454,6 +487,36 @@ class _LoanStatusTabState extends State<_LoanStatusTab> {
                     Text("Interest: ${(loan['interestRate'] * 100).toStringAsFixed(0)}%", style: const TextStyle(color: Colors.grey, fontSize: 13)),
                   ],
                 ),
+                const SizedBox(height: 12),
+                if (status == 'repaying' || status == 'approved') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D47A1),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.payments, size: 18),
+                      label: const Text("Make Repayment", style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        List<dynamic> schedule = loan['repaymentSchedule'] ?? [];
+                        double monthly = 0;
+                        if (schedule.isNotEmpty) {
+                          monthly = (schedule[0]['amount'] as num?)?.toDouble() ?? 0;
+                        }
+                        if (monthly <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No repayment schedule found')),
+                          );
+                          return;
+                        }
+                        _repayLoan(loan['id'], monthly);
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

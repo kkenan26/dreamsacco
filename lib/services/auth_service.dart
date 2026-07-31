@@ -28,7 +28,10 @@ class AuthService {
           email: email,
           createdAt: DateTime.now(),
         );
-        await _db.collection('users').doc(user.uid).set(newUser.toMap());
+        await _db.collection('users').doc(user.uid).set({...newUser.toMap(),
+        'totalSavings' : 0.0,
+        'totalLoansRepaid': 0,
+            });
         return user.uid;
       }
       return null;

@@ -1,4 +1,3 @@
-// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,16 +6,13 @@ import '../services/auth_service.dart';
 import 'contribution_screen.dart';
 import 'credit_scoring_screen.dart';
 import 'loan_screen.dart';
-import 'goals/goal_screen.dart';
 import 'milestones/milestone_screen.dart';
-import 'risk/risk_alert_screen.dart';
-import 'shares/shares_screen.dart';
 import 'transparency/transparency_screen.dart';
-import 'whatif/what_if_calculator_screen.dart';
 import 'group_mgt/group_list.dart';
 import 'welcome_screen.dart';
 import 'group_mgt/notifications.dart';
-import 'loan_screen.dart';
+import 'group_mgt/profile.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -30,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String userName = "Loading...";
   String memberId = "";
-  String savingsAmount = "UGX 0";
   String loanAmount = "UGX 0";
   String contributionStatus = "UNPAID";
   String savingsGoal = "0% Score";
@@ -40,6 +35,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDashboardData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadDashboardData();
   }
 
@@ -53,7 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .get();
 
       if (!userDoc.exists || !mounted) return;
-
       Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
 
       String groupId = '';
@@ -77,6 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .collection('contributions')
             .where('userId', isEqualTo: uid)
             .where('month', isEqualTo: month)
+            .where('status', isEqualTo: 'paid')
             .limit(1)
             .get();
 
@@ -85,20 +86,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      int totalContributions =
-          (data['totalContributions'] as num?)?.toInt() ?? 0;
-      int loanLimitVal = (data['loanLimit'] as num?)?.toInt() ?? 0;
+      double loanLimitVal = (data['loanLimit'] as num?)?.toDouble() ?? 0.0;
       int creditScore = (data['creditScore'] as num?)?.toInt() ?? 50;
       int streak = (data['contributionStreak'] as num?)?.toInt() ?? 0;
+
+      String fmt(double v) => v.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
       if (!mounted) return;
       setState(() {
         userName = data['name'] ?? 'User';
         memberId = uid.substring(0, 6).toUpperCase();
-        savingsAmount =
-        "UGX ${totalContributions.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
-        loanAmount =
-        "UGX ${loanLimitVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}";
+        loanAmount = "UGX ${fmt(loanLimitVal)}";
         contributionStatus = contribution;
         savingsGoal = "$creditScore% Score";
         riskAlert = streak > 2 ? "Good Standing" : "Build Your Streak";
@@ -132,27 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "screen": const ContributionScreen(),
     },
     {
-      "title": "Savings Goals",
-      "subtitle": "View Goals",
-      "icon": Icons.flag,
-      "color": Colors.blue,
-      "screen": const GoalScreen(),
-    },
-    {
-      "title": "What-If Calc",
-      "subtitle": "Estimate Loan",
-      "icon": Icons.calculate,
-      "color": Colors.purple,
-      "screen": const WhatIfCalculatorScreen(),
-    },
-    {
-      "title": "Risk Alerts",
-      "subtitle": riskAlert,
-      "icon": Icons.warning_amber,
-      "color": Colors.red,
-      "screen": const RiskAlertScreen(),
-    },
-    {
       "title": "Milestones",
       "subtitle": milestones,
       "icon": Icons.emoji_events,
@@ -165,13 +143,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "icon": Icons.bar_chart,
       "color": Colors.teal,
       "screen": const TransparencyScreen(),
-    },
-    {
-      "title": "Shares",
-      "subtitle": "View Shares",
-      "icon": Icons.pie_chart,
-      "color": Colors.indigo,
-      "screen": const SharesScreen(),
     },
   ];
 
@@ -294,6 +265,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: () => Navigator.push(
                 context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen())),
+            icon: const Icon(Icons.person),
+          ),
+          IconButton(
+            onPressed: () => Navigator.push(
+                context,
                 MaterialPageRoute(builder: (context) => const NotificationsScreen())),
             icon: const Icon(Icons.notifications),
           ),
@@ -324,8 +301,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Colors.black87),
             ),
             const SizedBox(height: 16),
-
-            // Balance Card
             Container(
               decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -374,32 +349,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  // FIX: Removed Savings column. Loan Limit is now centered and full-width.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text("Savings",
-                                style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text(
-                                hideBalance
-                                    ? "******"
-                                    : savingsAmount,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18))
-                          ],
-                        ),
-                      ),
-                      Container(
-                          width: 1,
-                          height: 35,
-                          color: Colors.white30),
                       Expanded(
                         child: Column(
                           children: [
@@ -415,10 +368,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18))
+                                    fontSize: 22))
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -444,8 +397,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Quick Actions Section
             const Text(
               "Quick Actions",
               style: TextStyle(
@@ -468,8 +419,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Services Grid
             const Text("Services",
                 style: TextStyle(
                     fontSize: 18,
@@ -499,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (context) =>
-                            s["screen"] as Widget)),
+                            s["screen"] as Widget)).then((_) => _loadDashboardData()),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/group.dart';
 import '../../models/member.dart';
 import 'profile.dart';
 import '../../services/adapter.dart';
-
 
 Future<bool> _confirmAction(BuildContext context, String title, String message) async {
   final result = await showDialog<bool>(
@@ -25,6 +26,7 @@ Future<bool> _confirmAction(BuildContext context, String title, String message) 
   );
   return result ?? false;
 }
+
 class MemberManagementScreen extends StatelessWidget {
   final String groupId;
 
@@ -35,6 +37,7 @@ class MemberManagementScreen extends StatelessWidget {
     final GroupService groupService = GroupService(
       creditScoreService: RealCreditScoreAdapter(),
     );
+    final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -43,87 +46,113 @@ class MemberManagementScreen extends StatelessWidget {
           backgroundColor: const Color(0xFF0D47A1),
           foregroundColor: Colors.white,
           title: const Text('Manage Members', style: TextStyle(fontWeight: FontWeight.w600))),
-      body: StreamBuilder<List<Member>>(
-        stream: groupService.getGroupMembers(groupId),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final members = snapshot.data ?? [];
-
-          if (members.isEmpty) {
-            return const Text('No members yet.');
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('groups')
+            .doc(groupId)
+            .collection('members')
+            .doc(currentUserId)
+            .get(),
+        builder: (context, adminSnapshot) {
+          bool isAdmin = false;
+          if (adminSnapshot.hasData && adminSnapshot.data!.exists) {
+            isAdmin = (adminSnapshot.data!.data() as Map<String, dynamic>)['role'] == 'admin';
           }
 
-          return ListView.builder(
-            itemCount: members.length,
-            itemBuilder: (context, index) {
-              final member = members[index];
+          return StreamBuilder<List<Member>>(
+            stream: groupService.getGroupMembers(groupId),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-              return FutureBuilder<String>(
-                future: groupService.getUserName(member.userId),
-                builder: (context, nameSnapshot) {
-                  final displayName = nameSnapshot.data ?? member.userId;
+              final members = snapshot.data ?? [];
 
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: ListTile(
-                      title: Text(displayName),
-                      subtitle: Text(
-                        member.shares > 0
-                            ? 'Status: ${member.status} · Shares: ${member.shares.toStringAsFixed(1)}'
-                            : 'Status: ${member.status}',
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfileScreen(userId: member.userId),
+              if (members.isEmpty) {
+                return const Text('No members yet.');
+              }
+
+              return ListView.builder(
+                itemCount: members.length,
+                itemBuilder: (context, index) {
+                  final member = members[index];
+
+                  return FutureBuilder<String>(
+                    future: groupService.getUserName(member.userId),
+                    builder: (context, nameSnapshot) {
+                      final displayName = nameSnapshot.data ?? member.userId;
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: ListTile(
+                          title: Text(displayName),
+                          subtitle: Text(
+                            member.shares > 0
+                                ? 'Status: ${member.status} · Shares: ${member.shares.toStringAsFixed(1)}'
+                                : 'Status: ${member.status}',
                           ),
-                        );
-                      },
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DropdownButton<String>(
-                            value: member.role,
-                            items: const [
-                              DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                              DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
-                              DropdownMenuItem(value: 'member', child: Text('Member')),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProfileScreen(userId: member.userId),
+                              ),
+                            );
+                          },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // FIX: Only show role dropdown if current user is admin AND not looking at themselves
+                              if (isAdmin && member.userId != currentUserId)
+                                DropdownButton<String>(
+                                  value: member.role,
+                                  items: const [
+                                    DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                                    DropdownMenuItem(value: 'treasurer', child: Text('Treasurer')),
+                                    DropdownMenuItem(value: 'member', child: Text('Member')),
+                                  ],
+                                  onChanged: (newRole) async {
+                                    if (newRole == null) return;
+                                    // Extra guard: prevent self-role-change
+                                    if (member.userId == currentUserId) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('You cannot change your own role')),
+                                      );
+                                      return;
+                                    }
+                                    await groupService.updateMemberRole(
+                                      groupId: groupId,
+                                      userId: member.userId,
+                                      newRole: newRole,
+                                    );
+                                  },
+                                ),
+                              // FIX: Only show delete if admin AND not trying to delete themselves
+                              if (isAdmin && member.userId != currentUserId)
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () async {
+                                    bool confirmed = await _confirmAction(
+                                      context,
+                                      'Remove Member?',
+                                      'This will remove $displayName from the group.',
+                                    );
+                                    if (confirmed) {
+                                      await groupService.removeMember(
+                                        groupId: groupId,
+                                        userId: member.userId,
+                                      );
+                                    }
+                                  },
+                                ),
                             ],
-                            onChanged: (newRole) async {
-                              if (newRole == null) return;
-                              await groupService.updateMemberRole(
-                                groupId: groupId,
-                                userId: member.userId,
-                                newRole: newRole,
-                              );
-                            },
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () async {
-                              bool confirmed = await _confirmAction(
-                                context,
-                                'Remove Member?',
-                                'This will remove $displayName from the group.',
-                              );
-                              if (confirmed) {
-                                await groupService.removeMember(
-                                  groupId: groupId,
-                                  userId: member.userId,
-                                );
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   );
                 },
               );

@@ -1,19 +1,6 @@
-// lib/screens/shares/shares_screen.dart
 import 'package:flutter/material.dart';
-
-class ShareTransaction {
-  final String date;
-  final int units;
-  final double amount;
-  final String type; // "Purchase" or "Transfer"
-
-  ShareTransaction({
-    required this.date,
-    required this.units,
-    required this.amount,
-    required this.type,
-  });
-}
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SharesScreen extends StatefulWidget {
   const SharesScreen({super.key});
@@ -27,39 +14,19 @@ class _SharesScreenState extends State<SharesScreen>
   static const Color primaryColor = Color(0xFF0D47A1);
   static const Color secondaryColor = Color(0xFF1976D2);
 
-  final String memberId = "SAC001";
-  final double sharePrice = 5000;
-  int totalUnits = 48;
-  final int minimumUnits = 20;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final String _uid = FirebaseAuth.instance.currentUser!.uid;
+
+  bool _isLoading = true;
+  String? _groupId;
+  String _groupName = '';
+  double _sharePrice = 0;
+  int _totalShares = 0;
+  int _sharesTaken = 0;
+  double _myShares = 0;
+  List<Map<String, dynamic>> _transactions = [];
 
   late AnimationController _animController;
-
-  final List<ShareTransaction> transactions = [
-    ShareTransaction(
-      date: "Jul 2026",
-      units: 8,
-      amount: 40000,
-      type: "Purchase",
-    ),
-    ShareTransaction(
-      date: "Apr 2026",
-      units: 10,
-      amount: 50000,
-      type: "Purchase",
-    ),
-    ShareTransaction(
-      date: "Jan 2026",
-      units: 15,
-      amount: 75000,
-      type: "Purchase",
-    ),
-    ShareTransaction(
-      date: "Sep 2025",
-      units: 15,
-      amount: 75000,
-      type: "Purchase",
-    ),
-  ];
 
   @override
   void initState() {
@@ -68,16 +35,73 @@ class _SharesScreenState extends State<SharesScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _animController.forward();
+    _loadData();
   }
 
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
+  Future<void> _loadData() async {
+    QuerySnapshot memberGroups = await _db
+        .collectionGroup('members')
+        .where('userId', isEqualTo: _uid)
+        .limit(1)
+        .get();
+
+    if (memberGroups.docs.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    _groupId = memberGroups.docs.first.reference.parent.parent!.id;
+    DocumentSnapshot groupDoc = await _db.collection('groups').doc(_groupId).get();
+    DocumentSnapshot memberDoc = await _db
+        .collection('groups')
+        .doc(_groupId)
+        .collection('members')
+        .doc(_uid)
+        .get();
+
+    if (!groupDoc.exists || !mounted) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    Map<String, dynamic> groupData = groupDoc.data() as Map<String, dynamic>;
+    Map<String, dynamic> memberData = memberDoc.data() as Map<String, dynamic>? ?? {};
+
+    QuerySnapshot txSnapshot = await _db
+        .collection('groups')
+        .doc(_groupId)
+        .collection('shareTransactions')
+        .where('userId', isEqualTo: _uid)
+        .orderBy('purchasedAt', descending: true)
+        .get();
+
+    List<Map<String, dynamic>> txs = txSnapshot.docs.map((doc) {
+      Map<String, dynamic> d = doc.data() as Map<String, dynamic>;
+      Timestamp? ts = d['purchasedAt'] as Timestamp?;
+      DateTime date = ts?.toDate() ?? DateTime.now();
+      return {
+        'date': '${date.month}/${date.year}',
+        'units': (d['units'] as num?)?.toInt() ?? 0,
+        'amount': (d['amount'] as num?)?.toDouble() ?? 0.0,
+        'type': d['type'] ?? 'Purchase',
+      };
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _groupName = groupData['name'] ?? 'Your Group';
+        _sharePrice = (groupData['contributionPerShare'] as num?)?.toDouble() ?? 0.0;
+        _totalShares = (groupData['totalShares'] as num?)?.toInt() ?? 0;
+        _sharesTaken = (groupData['sharesTaken'] as num?)?.toInt() ?? 0;
+        _myShares = (memberData['shares'] as num?)?.toDouble() ?? 0.0;
+        _transactions = txs;
+        _isLoading = false;
+      });
+      _animController.forward(from: 0);
+    }
   }
 
-  double get totalShareValue => totalUnits * sharePrice;
+  double get totalShareValue => _myShares * _sharePrice;
 
   String _formatCurrency(double value) {
     final str = value.toStringAsFixed(0);
@@ -91,22 +115,21 @@ class _SharesScreenState extends State<SharesScreen>
   }
 
   void _openBuySharesDialog() {
+    if (_groupId == null) return;
     final unitsController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text("Buy Shares"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Share Price: ${_formatCurrency(sharePrice)} per unit",
+                "Share Price: ${_formatCurrency(_sharePrice)} per unit",
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
               const SizedBox(height: 12),
@@ -127,36 +150,46 @@ class _SharesScreenState extends State<SharesScreen>
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () {
+              onPressed: () async {
                 final units = int.tryParse(unitsController.text.trim()) ?? 0;
                 if (units <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Enter a valid number of units"),
-                    ),
+                    const SnackBar(content: Text("Enter a valid number of units")),
                   );
                   return;
                 }
-                setState(() {
-                  totalUnits += units;
-                  transactions.insert(
-                    0,
-                    ShareTransaction(
-                      date: "Jul 2026",
-                      units: units,
-                      amount: units * sharePrice,
-                      type: "Purchase",
-                    ),
+
+                int remaining = _totalShares - _sharesTaken;
+                if (units > remaining) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Only $remaining shares remaining.")),
                   );
+                  return;
+                }
+
+                double amount = units * _sharePrice;
+
+                await _db.collection('groups').doc(_groupId).collection('shareTransactions').add({
+                  'userId': _uid,
+                  'units': units,
+                  'amount': amount,
+                  'type': 'Purchase',
+                  'purchasedAt': FieldValue.serverTimestamp(),
                 });
+
+                await _db.collection('groups').doc(_groupId).collection('members').doc(_uid).update({
+                  'shares': FieldValue.increment(units.toDouble()),
+                });
+
+                await _db.collection('groups').doc(_groupId).update({
+                  'sharesTaken': FieldValue.increment(units),
+                  'totalBalance': FieldValue.increment(amount),
+                });
+
                 Navigator.pop(context);
-                _animController.forward(from: 0);
+                _loadData();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      "Purchased $units share unit${units > 1 ? 's' : ''} successfully",
-                    ),
-                  ),
+                  SnackBar(content: Text("Purchased $units share unit${units > 1 ? 's' : ''}")),
                 );
               },
               child: const Text("Confirm"),
@@ -168,17 +201,33 @@ class _SharesScreenState extends State<SharesScreen>
   }
 
   @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          title: const Text("My Shares", style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          "My Shares",
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: const Text("My Shares", style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primaryColor,
@@ -209,11 +258,7 @@ class _SharesScreenState extends State<SharesScreen>
   Widget _sectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
-      ),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
     );
   }
 
@@ -238,28 +283,15 @@ class _SharesScreenState extends State<SharesScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Total Share Value",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(_groupName, style: const TextStyle(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 6),
           AnimatedBuilder(
             animation: _animController,
             builder: (context, child) {
-              final displayValue =
-                  totalShareValue *
-                  Curves.easeOutCubic.transform(_animController.value);
+              final displayValue = totalShareValue * Curves.easeOutCubic.transform(_animController.value);
               return Text(
                 _formatCurrency(displayValue),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
               );
             },
           ),
@@ -270,18 +302,11 @@ class _SharesScreenState extends State<SharesScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Units Owned",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
+                    const Text("Units Owned", style: TextStyle(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
-                      "$totalUnits units",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      "${_myShares.toStringAsFixed(0)} units",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ],
                 ),
@@ -292,18 +317,11 @@ class _SharesScreenState extends State<SharesScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Price per Unit",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
+                    const Text("Price per Unit", style: TextStyle(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
-                      _formatCurrency(sharePrice),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      _formatCurrency(_sharePrice),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ],
                 ),
@@ -316,8 +334,7 @@ class _SharesScreenState extends State<SharesScreen>
   }
 
   Widget _buildCertificateCard() {
-    final meetsMinimum = totalUnits >= minimumUnits;
-
+    final meetsMinimum = _myShares > 0;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -340,17 +357,14 @@ class _SharesScreenState extends State<SharesScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Member ID: $memberId",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  "Member ID: ${_uid.substring(0, 8).toUpperCase()}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   meetsMinimum
-                      ? "Minimum share requirement met ($minimumUnits units)"
-                      : "Minimum requirement: $minimumUnits units (${minimumUnits - totalUnits} more needed)",
+                      ? "Shareholder in $_groupName"
+                      : "Buy shares to become a shareholder",
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
@@ -366,20 +380,17 @@ class _SharesScreenState extends State<SharesScreen>
   }
 
   Widget _buildTransactionList() {
-    if (transactions.isEmpty) {
+    if (_transactions.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 30),
-          child: Text(
-            "No share purchases yet",
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
+          child: Text("No share purchases yet", style: TextStyle(color: Colors.grey.shade600)),
         ),
       );
     }
 
     return Column(
-      children: transactions.map((tx) {
+      children: _transactions.map((tx) {
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
@@ -387,11 +398,7 @@ class _SharesScreenState extends State<SharesScreen>
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
+              BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
             ],
           ),
           child: Row(
@@ -399,11 +406,7 @@ class _SharesScreenState extends State<SharesScreen>
               CircleAvatar(
                 radius: 18,
                 backgroundColor: secondaryColor.withValues(alpha: 0.12),
-                child: const Icon(
-                  Icons.pie_chart,
-                  color: secondaryColor,
-                  size: 18,
-                ),
+                child: const Icon(Icons.pie_chart, color: secondaryColor, size: 18),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -411,29 +414,20 @@ class _SharesScreenState extends State<SharesScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "${tx.type} • ${tx.units} units",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+                      "${tx['type']} • ${tx['units']} units",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      tx.date,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
+                      tx['date'],
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
               ),
               Text(
-                _formatCurrency(tx.amount),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                _formatCurrency(tx['amount']),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
           ),

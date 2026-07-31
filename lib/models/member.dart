@@ -33,6 +33,7 @@ class Member{
       'role': role,
       'status': status,
       'riskFlag': riskFlag,
+      'shares': shares,
       'joinedAt': Timestamp.fromDate(joinedAt),
     };
   }

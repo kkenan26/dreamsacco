@@ -10,11 +10,8 @@ class CreditScoreService {
     try {
       String uid = _auth.currentUser?.uid ?? '';
 
-      // Fetch contributions for this user in this group
       QuerySnapshot contributions = await _db
-          .collection('groups')
-          .doc(groupId)
-          .collection('contributions')
+          .collectionGroup('contributions')
           .where('userId', isEqualTo: uid)
           .get();
 
@@ -30,11 +27,8 @@ class CreditScoreService {
         }
       }
 
-      // Fetch loans for this user
       QuerySnapshot loans = await _db
-          .collection('groups')
-          .doc(groupId)
-          .collection('loans')
+          .collectionGroup('loans')
           .where('requesterId', isEqualTo: uid)
           .get();
 
@@ -47,14 +41,12 @@ class CreditScoreService {
         if (status == 'repaying') activeLoanCount++;
       }
 
-      // Fetch streak from user profile
       DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
       int streak = 0;
       if (userDoc.exists) {
         streak = (userDoc['contributionStreak'] as num?)?.toInt() ?? 0;
       }
 
-      // Compute and return credit score
       CreditScoreModel score = CreditScoreModel.compute(
         totalContributions: totalContributions,
         missedContributions: missedContributions,
@@ -63,7 +55,6 @@ class CreditScoreService {
         contributionStreak: streak,
       );
 
-      // Save updated credit score back to user profile
       await _db.collection('users').doc(uid).update({
         'creditScore': score.score,
         'loanLimit': score.loanLimit,
